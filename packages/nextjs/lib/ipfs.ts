@@ -6,6 +6,9 @@ export const USDC_ADDRESS = ""; // TBD - not yet supported
 export const MIN_ETH_PRICE = "100000000000000"; // 0.0001 ETH
 export const MIN_USDC_PRICE = "10000"; // 0.01 USDC (6 decimals) - not yet supported
 
+// IPFS Gateway URL - can be configured via env var for custom gateways
+export const IPFS_GATEWAY_URL = process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL || "https://ipfs.io/ipfs/";
+
 export interface ArticleMetadata {
   name: string;
   description: string;
@@ -61,5 +64,5 @@ export async function fetchFromIPFS<CID extends string>(cid: CID): Promise<Artic
 }
 
 export function getIPFSGatewayUrl(cid: string): string {
-  return `https://ipfs.io/ipfs/${cid}`;
+  return `${IPFS_GATEWAY_URL}${cid}`;
 }
