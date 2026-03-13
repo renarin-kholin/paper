@@ -2,6 +2,7 @@
 src = 'contracts'
 out = 'out'
 libs = ['lib', 'node_modules']
+remappings = ['@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/', 'solidity-bytes-utils/=node_modules/solidity-bytes-utils/contracts/']
 fs_permissions = [{ access = "read-write", path = "./"}]
 
 

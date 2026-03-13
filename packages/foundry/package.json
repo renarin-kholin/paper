@@ -28,6 +28,7 @@
     "toml": "~3.0.0"
   },
   "devDependencies": {
-    "shx": "^0.3.4"
+    "shx": "^0.3.4",
+    "solidity-bytes-utils": "^0.8.4"
   }
 }
