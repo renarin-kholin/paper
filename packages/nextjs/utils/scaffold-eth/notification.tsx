@@ -12,22 +12,22 @@ type NotificationProps = {
   content: React.ReactNode;
   status: "success" | "info" | "loading" | "error" | "warning";
   duration?: number;
-  icon?: string;
+  icon?: React.ReactNode;
   position?: ToastPosition;
 };
 
 type NotificationOptions = {
   duration?: number;
-  icon?: string;
+  icon?: React.ReactNode;
   position?: ToastPosition;
 };
 
 const ENUM_STATUSES = {
-  success: <CheckCircleIcon className="w-7 text-success" />,
-  loading: <span className="w-6 loading loading-spinner"></span>,
-  error: <ExclamationCircleIcon className="w-7 text-error" />,
-  info: <InformationCircleIcon className="w-7 text-info" />,
-  warning: <ExclamationTriangleIcon className="w-7 text-warning" />,
+  success: <CheckCircleIcon className="h-6 w-6 text-emerald-600" />,
+  loading: <span className="h-5 w-5 rounded-full border-2 border-stone-300 border-t-stone-700 animate-spin" />,
+  error: <ExclamationCircleIcon className="h-6 w-6 text-rose-600" />,
+  info: <InformationCircleIcon className="h-6 w-6 text-sky-600" />,
+  warning: <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />,
 };
 
 const DEFAULT_DURATION = 3000;
@@ -43,22 +43,29 @@ const Notification = ({
   icon,
   position = DEFAULT_POSITION,
 }: NotificationProps) => {
+  const isTop = position.startsWith("top");
+
   return toast.custom(
     (t: Toast) => (
       <div
-        className={`flex flex-row items-start justify-between max-w-sm rounded-xl shadow-center shadow-accent bg-base-200 p-4 transform-gpu relative transition-all duration-500 ease-in-out space-x-2
-        ${
-          position.substring(0, 3) == "top"
-            ? `hover:translate-y-1 ${t.visible ? "top-0" : "-top-96"}`
-            : `hover:-translate-y-1 ${t.visible ? "bottom-0" : "-bottom-96"}`
+        className={`pointer-events-auto flex max-w-sm items-start gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-[0_10px_24px_-16px_rgba(0,0,0,0.28)] transform-gpu transition-all duration-200 ${
+          t.visible ? "translate-y-0 opacity-100" : isTop ? "-translate-y-2 opacity-0" : "translate-y-2 opacity-0"
         }`}
       >
-        <div className="leading-[0] self-center">{icon ? icon : ENUM_STATUSES[status]}</div>
-        <div className={`overflow-x-hidden break-words whitespace-pre-line ${icon ? "mt-1" : ""}`}>{content}</div>
+        <div className="mt-0.5 shrink-0 leading-none">{icon ?? ENUM_STATUSES[status]}</div>
 
-        <div className={`cursor-pointer text-lg ${icon ? "mt-1" : ""}`} onClick={() => toast.dismiss(t.id)}>
-          <XMarkIcon className="w-6 cursor-pointer" onClick={() => toast.remove(t.id)} />
+        <div className="min-w-0 flex-1 overflow-x-hidden break-words text-sm leading-relaxed text-stone-700 whitespace-pre-line">
+          {content}
         </div>
+
+        <button
+          type="button"
+          className="-mr-1 -mt-1 rounded-full p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+          onClick={() => toast.remove(t.id)}
+          aria-label="Dismiss notification"
+        >
+          <XMarkIcon className="h-5 w-5" />
+        </button>
       </div>
     ),
     {
