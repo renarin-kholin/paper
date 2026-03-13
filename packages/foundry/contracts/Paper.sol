@@ -32,6 +32,9 @@ contract Paper is ERC721URIStorage {
     /// @notice Track who has paid for each article
     mapping(uint256 => mapping(address => bool)) public hasPaid;
 
+    /// @notice Maps user address to their IPFS profile CID
+    mapping(address => string) public userProfileCIDs;
+
     /// @notice USDC interface for transfers
     IERC20 public usdc;
 
@@ -56,6 +59,11 @@ contract Paper is ERC721URIStorage {
     /// @param payer The address that made the payment
     /// @param amount The amount paid
     event PaymentReceived(uint256 indexed tokenId, address payer, uint256 amount);
+
+    /// @notice Emitted when user profile is updated
+    /// @param user The user address
+    /// @param cid The new IPFS profile CID
+    event UserProfileUpdated(address indexed user, string cid);
 
     /// @notice Initialize the contract with ERC721 token details
     constructor() ERC721("Paper Article", "PAPER") {
@@ -167,6 +175,21 @@ contract Paper is ERC721URIStorage {
     /// @return true if user has paid
     function hasPaidForArticle(uint256 tokenId, address user) external view returns (bool) {
         return hasPaid[tokenId][user];
+    }
+
+    /// @notice Set or update user profile
+    /// @param cid The IPFS CID for the user profile JSON
+    function setUserProfile(string memory cid) external {
+        require(bytes(cid).length > 0, "Paper: empty CID");
+        userProfileCIDs[msg.sender] = cid;
+        emit UserProfileUpdated(msg.sender, cid);
+    }
+
+    /// @notice Get user profile CID
+    /// @param user The user address
+    /// @return The IPFS CID for the user profile
+    function getUserProfileCID(address user) external view returns (string memory) {
+        return userProfileCIDs[user];
     }
 }
 

@@ -15,7 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/dashboard", label: "Stats", icon: BarChart2 },
   { href: "/write", label: "Stories", icon: BookOpen },
-  { href: "/signup", label: "Profile", icon: User },
+  { href: "/profile", label: "Profile", icon: User },
 ];
 
 const isActivePath = (pathname: string, href: string) => {

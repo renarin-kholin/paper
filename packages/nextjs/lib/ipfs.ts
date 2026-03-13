@@ -21,6 +21,18 @@ export interface ArticleMetadata {
   image?: string;
 }
 
+export interface UserProfile {
+  name: string;
+  bio: string;
+  avatar?: string; // IPFS CID for image
+  coverImage?: string; // IPFS CID for image
+  socialLinks?: {
+    twitter?: string;
+    website?: string;
+  };
+  updatedAt: number;
+}
+
 export async function uploadToIPFS(data: ArticleMetadata): Promise<string> {
   const jsonString = JSON.stringify(data);
   const encoder = new TextEncoder();
@@ -65,4 +77,64 @@ export async function fetchFromIPFS<CID extends string>(cid: CID): Promise<Artic
 
 export function getIPFSGatewayUrl(cid: string): string {
   return `${IPFS_GATEWAY_URL}${cid}`;
+}
+
+export async function uploadProfileToIPFS(data: UserProfile): Promise<string> {
+  const jsonString = JSON.stringify(data);
+  const encoder = new TextEncoder();
+  const buffer = encoder.encode(jsonString);
+
+  const response = await fetch("/api/ipfs?action=add", {
+    method: "POST",
+    body: buffer,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`IPFS profile upload failed: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  return result.cid;
+}
+
+export async function fetchProfileFromIPFS<CID extends string>(cid: CID): Promise<UserProfile> {
+  const encoder = new TextEncoder();
+  const body = encoder.encode(cid);
+
+  const response = await fetch("/api/ipfs", {
+    method: "POST",
+    body: body,
+    headers: {
+      "Content-Type": "text/plain",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`IPFS profile fetch failed: ${response.statusText}`);
+  }
+
+  return response.json() as Promise<UserProfile>;
+}
+
+export async function uploadImageToIPFS(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+
+  const response = await fetch("/api/ipfs?action=addImage", {
+    method: "POST",
+    body: arrayBuffer,
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to upload image");
+  }
+
+  const result = await response.json();
+  return result.cid;
 }
