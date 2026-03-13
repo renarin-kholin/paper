@@ -53,19 +53,21 @@ export const FaucetButton = () => {
   const isBalanceZero = balance && balance.value === 0n;
 
   return (
-    <div
-      className={
-        !isBalanceZero
-          ? "ml-1"
-          : "ml-1 tooltip tooltip-bottom tooltip-primary tooltip-open font-bold before:left-auto before:transform-none before:content-[attr(data-tip)] before:-translate-x-2/5"
-      }
-      data-tip="Grab funds from faucet"
-    >
-      <button className="btn btn-secondary btn-sm px-2 rounded-full" onClick={sendETH} disabled={loading}>
+    <div className="ml-1">
+      <button
+        className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-stone-400 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+        onClick={sendETH}
+        disabled={loading}
+        title={isBalanceZero ? "Grab funds from faucet" : "Request test ETH"}
+        type="button"
+      >
         {!loading ? (
-          <BanknotesIcon className="h-4 w-4" />
+          <>
+            <BanknotesIcon className="h-4 w-4" />
+            <span>Get test ETH</span>
+          </>
         ) : (
-          <span className="loading loading-spinner loading-xs"></span>
+          <span>Sending...</span>
         )}
       </button>
     </div>

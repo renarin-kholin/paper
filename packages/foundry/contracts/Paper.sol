@@ -148,7 +148,7 @@ contract Paper is ERC721URIStorage {
             // ETH payment
             require(msg.value >= meta.price, "Paper: insufficient ETH");
             hasPaid[tokenId][msg.sender] = true;
-            (bool success, ) = payable(meta.author).call{value: msg.value}("");
+            (bool success,) = payable(meta.author).call{ value: msg.value }("");
             require(success, "Paper: ETH transfer failed");
         } else {
             // USDC payment

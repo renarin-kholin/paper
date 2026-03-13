@@ -20,57 +20,74 @@ export const RainbowKitCustomConnectButton = () => {
   const { targetNetwork } = useTargetNetwork();
 
   return (
-    <ConnectButton.Custom>
-      {({ account, chain, openConnectModal, mounted }) => {
-        const connected = mounted && account && chain;
-        const blockExplorerAddressLink = account
-          ? getBlockExplorerAddressLink(targetNetwork, account.address)
-          : undefined;
+    <div className="wallet-ui">
+      <ConnectButton.Custom>
+        {({ account, chain, openConnectModal, mounted }) => {
+          const connected = mounted && account && chain;
+          const blockExplorerAddressLink = account
+            ? getBlockExplorerAddressLink(targetNetwork, account.address)
+            : undefined;
 
-        return (
-          <>
-            {(() => {
-              if (!connected) {
+          return (
+            <>
+              {(() => {
+                if (!mounted) {
+                  return (
+                    <button
+                      className="btn btn-secondary btn-sm opacity-70 pointer-events-none animate-pulse"
+                      type="button"
+                    >
+                      Loading wallet...
+                    </button>
+                  );
+                }
+
+                if (!connected) {
+                  return (
+                    <button
+                      className="btn btn-primary btn-sm hover:scale-[1.02] active:scale-[0.98]"
+                      onClick={openConnectModal}
+                      type="button"
+                    >
+                      Connect Wallet
+                    </button>
+                  );
+                }
+
+                if (chain.unsupported || chain.id !== targetNetwork.id) {
+                  return <WrongNetworkDropdown />;
+                }
+
                 return (
-                  <button className="btn btn-primary btn-sm" onClick={openConnectModal} type="button">
-                    Connect Wallet
-                  </button>
-                );
-              }
-
-              if (chain.unsupported || chain.id !== targetNetwork.id) {
-                return <WrongNetworkDropdown />;
-              }
-
-              return (
-                <>
-                  <div className="flex flex-col items-center mr-2">
-                    <Balance
+                  <>
+                    <div className="flex flex-col items-center mr-2 rounded-lg px-2 py-1 bg-stone-50 border border-stone-200">
+                      <Balance
+                        address={account.address as Address}
+                        style={{
+                          minHeight: "0",
+                          height: "auto",
+                          fontSize: "0.8em",
+                        }}
+                      />
+                      <span className="text-xs" style={{ color: networkColor }}>
+                        {chain.name}
+                      </span>
+                    </div>
+                    <AddressInfoDropdown
                       address={account.address as Address}
-                      style={{
-                        minHeight: "0",
-                        height: "auto",
-                        fontSize: "0.8em",
-                      }}
+                      displayName={account.displayName}
+                      ensAvatar={account.ensAvatar}
+                      blockExplorerAddressLink={blockExplorerAddressLink}
                     />
-                    <span className="text-xs" style={{ color: networkColor }}>
-                      {chain.name}
-                    </span>
-                  </div>
-                  <AddressInfoDropdown
-                    address={account.address as Address}
-                    displayName={account.displayName}
-                    ensAvatar={account.ensAvatar}
-                    blockExplorerAddressLink={blockExplorerAddressLink}
-                  />
-                  <AddressQRCodeModal address={account.address as Address} modalId="qrcode-modal" />
-                  <RevealBurnerPKModal />
-                </>
-              );
-            })()}
-          </>
-        );
-      }}
-    </ConnectButton.Custom>
+                    <AddressQRCodeModal address={account.address as Address} modalId="qrcode-modal" />
+                    <RevealBurnerPKModal />
+                  </>
+                );
+              })()}
+            </>
+          );
+        }}
+      </ConnectButton.Custom>
+    </div>
   );
 };

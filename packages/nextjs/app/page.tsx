@@ -1,152 +1,195 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import type { NextPage } from "next";
+import { BookmarkPlus, MoreHorizontal, Sparkles, Star } from "lucide-react";
+import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import type { Article } from "~~/hooks/useArticles";
+import { fetchFromIPFS } from "~~/lib/ipfs";
 
-// Single article card - fetches its own data
-function ArticleCardItem({ id }: { id: bigint }) {
-  const { data: meta, error: metaError } = useScaffoldReadContract({
+type ArticleMetaTuple = [string, bigint, string, bigint, string];
+
+const toPreviewText = (raw?: string) => {
+  if (!raw) return "";
+
+  // Support markdown and html-like content, then collapse whitespace for stable line clamping.
+  const noHtml = raw.replace(/<[^>]*>/g, " ");
+  const noMarkdown = noHtml
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^[#>*\-\d.\s]+/gm, "")
+    .replace(/[*_~]/g, "");
+
+  return noMarkdown.replace(/\s+/g, " ").trim();
+};
+
+function PostCard({ id }: { id: bigint }) {
+  const [preview, setPreview] = useState("");
+
+  const { data: meta } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "articleMeta",
     args: [id],
   });
 
-  const { data: cid, error: cidError } = useScaffoldReadContract({
+  const { data: cid } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "getArticleCID",
     args: [id],
   });
 
-  // Debug: Show errors
-  if (metaError || cidError) {
-    return (
-      <div className="card bg-base-100 shadow-md border border-error">
-        <div className="card-body">
-          <p className="text-error">Error loading article #{id.toString()}</p>
-          <p className="text-xs text-error/70">{metaError?.message || cidError?.message}</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!cid) return;
+
+    let active = true;
+    fetchFromIPFS(cid)
+      .then(data => {
+        if (!active) return;
+        const normalizedPreview = toPreviewText(data.preview || data.description || data.content || "");
+        setPreview(normalizedPreview.slice(0, 220));
+      })
+      .catch(() => {
+        if (!active) return;
+        setPreview("");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [cid]);
 
   if (!meta || !cid) {
     return (
-      <div className="card bg-base-100 shadow-md">
-        <div className="card-body">
-          <div className="skeleton h-6 w-3/4"></div>
-          <div className="skeleton h-4 w-1/2 mt-2"></div>
+      <article className="group flex gap-4 sm:gap-6 items-start page-fade-in">
+        <div className="flex-1 min-w-0">
+          <div className="h-6 w-3/4 mb-2 bg-stone-100 rounded" />
+          <div className="h-4 w-full bg-stone-100 rounded" />
         </div>
-      </div>
+      </article>
     );
   }
 
-  // meta is tuple [author, createdAt, title]
-  const [author, createdAt, title] = meta;
-
-  const article: Article = {
-    id,
-    author: author as string,
-    createdAt: createdAt as bigint,
-    title: title as string,
-    cid,
-  };
-
-  const formattedDate = new Date(Number(article.createdAt) * 1000).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const [author, createdAt, title, price] = meta as ArticleMetaTuple;
+  const isPaywalled = price > 0n;
 
   return (
-    <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
-      <div className="card-body">
-        <Link href={`/article/${article.id}`} className="card-title text-lg hover:text-primary transition-colors">
-          {article.title}
-        </Link>
-        <div className="flex items-center text-sm text-base-content/60 mt-2">
-          <Link href={`/author/${article.author}`} className="flex items-center gap-1 hover:text-primary">
-            {article.author.slice(0, 6)}...{article.author.slice(-4)}
-          </Link>
-          <span className="mx-2">•</span>
-          <span>{formattedDate}</span>
+    <article className="group flex gap-4 sm:gap-6 items-start page-fade-in">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-medium text-stone-900">
+            {author.slice(0, 6)}...{author.slice(-4)}
+          </span>
         </div>
-        <div className="card-actions justify-end mt-4">
-          <Link href={`/article/${article.id}`} className="btn btn-primary btn-sm">
-            Read More
-          </Link>
+        <Link href={`/post/${id.toString()}`} className="block mb-2 rounded-md focus-visible:outline-none">
+          <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-1 group-hover:text-stone-700 transition-colors font-serif leading-snug">
+            {title}
+          </h2>
+          <div className="text-stone-500 line-clamp-2 leading-relaxed text-sm md:text-base hidden sm:block prose-sm *:m-0">
+            {preview || "Read this on-chain article."}
+          </div>
+        </Link>
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500">
+            {isPaywalled && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
+            <Sparkles className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+            <span>{new Date(Number(createdAt) * 1000).toLocaleDateString()}</span>
+            <span>·</span>
+            <span>4 min read</span>
+          </div>
+          <div className="flex items-center gap-3 text-stone-400">
+            <button className="hover:text-stone-900 active:scale-95" type="button" aria-label="Bookmark post">
+              <BookmarkPlus className="w-5 h-5" />
+            </button>
+            <button className="hover:text-stone-900 active:scale-95" type="button" aria-label="More options">
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+      <div className="w-[100px] h-[96px] sm:w-[152px] sm:h-[112px] shrink-0 bg-stone-100 rounded-sm overflow-hidden lift-on-hover">
+        <Image
+          src={`https://picsum.photos/seed/${id.toString()}/300/200`}
+          alt={title}
+          width={152}
+          height={112}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    </article>
   );
 }
 
-const Home: NextPage = () => {
-  const {
-    data: articleCount,
-    isLoading: countLoading,
-    refetch,
-  } = useScaffoldReadContract({
+export default function Home() {
+  const { address } = useAccount();
+  const [feedTab, setFeedTab] = useState<"for-you" | "following">("for-you");
+
+  const { data: articleCount } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "articleCount",
   });
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Force refetch when component mounts
-
-  useEffect(() => {
-    if (mounted) {
-      refetch();
-    }
-  }, [mounted]);
-
   const count = articleCount ? Number(articleCount) : 0;
+  const postIds = Array.from({ length: count }, (_, i) => BigInt(count - 1 - i));
 
-  if (!mounted || countLoading) {
-    return (
-      <div className="space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold">Paper</h1>
-          <p className="text-base-content/60 mt-2">Decentralized publishing on the blockchain</p>
-        </div>
-        <div className="flex justify-center py-12">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      </div>
-    );
-  }
+  const visibleIds = useMemo(() => {
+    if (feedTab === "for-you" || !address) return postIds;
+    return postIds;
+  }, [address, feedTab, postIds]);
 
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold">Paper</h1>
-        <p className="text-base-content/60 mt-2">Decentralized publishing on the blockchain</p>
+    <div className="flex flex-col lg:flex-row w-full page-fade-in">
+      <div className="flex-1 max-w-[680px] px-8 lg:pr-12 py-6 sm:py-8">
+        <div className="border-b border-stone-200 mb-8 flex gap-8">
+          <button
+            className={`pb-4 text-sm font-medium ${feedTab === "for-you" ? "border-b border-stone-900 text-stone-900" : "text-stone-500 hover:text-stone-900"}`}
+            onClick={() => setFeedTab("for-you")}
+            type="button"
+          >
+            For you
+          </button>
+          <button
+            className={`pb-4 text-sm font-medium ${feedTab === "following" ? "border-b border-stone-900 text-stone-900" : "text-stone-500 hover:text-stone-900"}`}
+            onClick={() => setFeedTab("following")}
+            type="button"
+          >
+            Following
+          </button>
+        </div>
+
+        <div className="space-y-10">
+          {visibleIds.map(id => (
+            <PostCard key={id.toString()} id={id} />
+          ))}
+
+          {visibleIds.length === 0 && (
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 p-8 text-center text-stone-500">
+              No posts in this tab yet.
+            </div>
+          )}
+        </div>
       </div>
 
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Latest Articles</h2>
-        {count === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-base-content/60 text-lg">No articles yet.</p>
-            <p className="text-base-content/40 mt-2">Be the first to publish an article!</p>
+      <aside className="hidden lg:block w-[320px] py-8 border-l border-stone-100 pl-8">
+        <div className="sticky top-24 space-y-10">
+          <div>
+            <h3 className="text-base font-bold text-stone-900 mb-4">Recommended topics</h3>
+            <div className="flex flex-wrap gap-2">
+              {["Technology", "Web3", "Writing", "Design", "Privacy", "AI", "Crypto"].map(topic => (
+                <button
+                  key={topic}
+                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 transition-colors rounded-full text-sm text-stone-900 active:scale-95"
+                  type="button"
+                >
+                  {topic}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: count }, (_, i) => BigInt(count - 1 - i)).map(id => (
-              <ArticleCardItem key={id.toString()} id={id} />
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      </aside>
     </div>
   );
-};
-
-export default Home;
+}

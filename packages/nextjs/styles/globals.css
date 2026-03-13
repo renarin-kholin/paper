@@ -1,123 +1,223 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import "../styles/_variables.scss";
+@import "../styles/_keyframe-animations.scss";
 
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
-
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
-
-@theme {
-  --shadow-center: 0 0 12px -2px rgb(0 0 0 / 0.05);
-  --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+:root {
+  --ease-out-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-professional: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-@plugin "daisyui" {
-  themes:
-    light,
-    dark --prefersdark;
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
-@plugin "daisyui/theme" {
-  name: "light";
-
-  --color-primary: #93bbfb;
-  --color-primary-content: #212638;
-  --color-secondary: #dae8ff;
-  --color-secondary-content: #212638;
-  --color-accent: #93bbfb;
-  --color-accent-content: #212638;
-  --color-neutral: #212638;
-  --color-neutral-content: #ffffff;
-  --color-base-100: #ffffff;
-  --color-base-200: #f4f8ff;
-  --color-base-300: #dae8ff;
-  --color-base-content: #212638;
-  --color-info: #93bbfb;
-  --color-success: #34eeb6;
-  --color-warning: #ffcf72;
-  --color-error: #ff8863;
-
-  --radius-field: 9999rem;
-  --radius-box: 1rem;
-  --tt-tailw: 6px;
+html,
+body {
+  scroll-behavior: smooth;
 }
 
-@plugin "daisyui/theme" {
-  name: "dark";
-
-  --color-primary: #212638;
-  --color-primary-content: #f9fbff;
-  --color-secondary: #323f61;
-  --color-secondary-content: #f9fbff;
-  --color-accent: #4969a6;
-  --color-accent-content: #f9fbff;
-  --color-neutral: #f9fbff;
-  --color-neutral-content: #385183;
-  --color-base-100: #385183;
-  --color-base-200: #2a3655;
-  --color-base-300: #212638;
-  --color-base-content: #f9fbff;
-  --color-info: #385183;
-  --color-success: #34eeb6;
-  --color-warning: #ffcf72;
-  --color-error: #ff8863;
-
-  --radius-field: 9999rem;
-  --radius-box: 1rem;
-
-  --tt-tailw: 6px;
-  --tt-bg: var(--color-primary);
+a,
+button,
+summary,
+[role="button"],
+label[for] {
+  cursor: pointer;
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+button,
+a,
+input,
+textarea {
+  transition:
+    color 150ms var(--ease-professional),
+    background-color 150ms var(--ease-professional),
+    border-color 150ms var(--ease-professional),
+    box-shadow 170ms var(--ease-professional),
+    transform 170ms var(--ease-professional),
+    opacity 150ms var(--ease-professional);
+}
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(41, 37, 36, 0.2);
+  outline-offset: 2px;
+}
+
+.page-fade-in {
+  animation: page-fade-in 260ms var(--ease-professional) both;
+}
+
+.lift-on-hover {
+  transition:
+    transform 180ms var(--ease-professional),
+    box-shadow 180ms var(--ease-professional);
+}
+
+.lift-on-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px -14px rgba(0, 0, 0, 0.28);
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
   }
 
-  p {
-    margin: 1rem 0;
-  }
-
-  body {
-    min-height: 100vh;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4 {
-    margin-bottom: 0.5rem;
-    line-height: 1;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-:root,
-[data-theme] {
-  background: var(--color-base-200);
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-.btn {
-  @apply shadow-md;
+.wallet-ui .btn,
+.wallet-ui button.btn,
+.wallet-ui .menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid #d6d3d1;
+  background: #ffffff;
+  color: #44403c;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transform: translateY(0);
 }
 
-.btn.btn-ghost {
-  @apply shadow-none;
+.wallet-ui .btn:hover,
+.wallet-ui .menu-item:hover {
+  background: #f5f5f4;
+  border-color: #a8a29e;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px -14px rgba(0, 0, 0, 0.28);
 }
 
-.link {
-  text-underline-offset: 2px;
+.wallet-ui .btn-primary {
+  background: #1c1917;
+  border-color: #1c1917;
+  color: #ffffff;
 }
 
-.link:hover {
-  opacity: 80%;
+.wallet-ui .btn-primary:hover {
+  background: #292524;
+  border-color: #292524;
+}
+
+.wallet-ui .btn-secondary {
+  background: #f5f5f4;
+}
+
+.wallet-ui .btn-error {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.wallet-ui .btn-outline {
+  background: transparent;
+}
+
+.wallet-ui .dropdown,
+.wallet-ui details.dropdown {
+  position: relative;
+}
+
+.wallet-ui .dropdown-content {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 60;
+  min-width: 14rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e7e5e4;
+  background: #ffffff;
+  padding: 0.5rem;
+  box-shadow: 0 10px 20px -16px rgba(0, 0, 0, 0.28);
+  display: none;
+}
+
+.wallet-ui details[open]>.dropdown-content,
+.wallet-ui .dropdown:focus-within>.dropdown-content,
+.wallet-ui .dropdown>[tabindex="0"]:focus+.dropdown-content {
+  display: block;
+}
+
+.wallet-ui .menu {
+  list-style: none;
+  margin: 0;
+}
+
+.wallet-ui .menu li {
+  margin: 0.15rem 0;
+}
+
+.wallet-ui .menu li>* {
+  width: 100%;
+  justify-content: flex-start;
+  border-radius: 0.6rem;
+  font-weight: 500;
+}
+
+.wallet-ui .menu .text-error {
+  color: #be123c;
+}
+
+.wallet-ui .rounded-box {
+  border-radius: 0.75rem;
+}
+
+.wallet-ui .bg-base-200 {
+  background: #ffffff;
+}
+
+.wallet-ui .modal-toggle {
+  display: none;
+}
+
+.wallet-ui .modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 10, 9, 0.4);
+  padding: 1rem;
+}
+
+.wallet-ui .modal-toggle:checked+.modal {
+  display: flex;
+}
+
+.wallet-ui .modal-box {
+  width: min(100%, 32rem);
+  border-radius: 1rem;
+  border: 1px solid #e7e5e4;
+  background: #ffffff;
+  padding: 1.25rem;
+  box-shadow: 0 14px 32px -22px rgba(0, 0, 0, 0.28);
+}
+
+.wallet-ui .alert {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  border-radius: 0.75rem;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  padding: 0.7rem 0.8rem;
 }
