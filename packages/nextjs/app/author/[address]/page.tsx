@@ -1,8 +1,8 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import type { NextPage } from "next";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import type { Article } from "~~/hooks/useArticles";
@@ -115,17 +115,15 @@ const AuthorPage: NextPage = () => {
       </div>
 
       <div>
-        <h2 className="text-2xl font-semibold mb-4">
-          Articles
-        </h2>
-        
+        <h2 className="text-2xl font-semibold mb-4">Articles</h2>
+
         {count === 0 ? (
           <div className="text-center py-12">
             <p className="text-base-content/60 text-lg">No articles yet.</p>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {articleIds.map((id) => (
+            {articleIds.map(id => (
               <ArticleCardItem key={id.toString()} id={id} authorFilter={authorAddress} />
             ))}
           </div>

@@ -7,12 +7,38 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Paper: {
-      address: "0x700b6a60ce7eaaea56f065753d8dcb9653dbad35",
+      address: "0xb19b36b1456e65e3a6d514d3f715f204bd59f431",
       abi: [
         {
           type: "constructor",
           inputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "MIN_ETH_PRICE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "MIN_USDC_PRICE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -70,6 +96,16 @@ const deployedContracts = {
               name: "title",
               type: "string",
               internalType: "string",
+            },
+            {
+              name: "price",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "priceToken",
+              type: "address",
+              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -162,7 +198,89 @@ const deployedContracts = {
                   type: "string",
                   internalType: "string",
                 },
+                {
+                  name: "price",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "priceToken",
+                  type: "address",
+                  internalType: "address",
+                },
               ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getArticlePrice",
+          inputs: [
+            {
+              name: "tokenId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "price",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "priceToken",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "hasPaid",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "hasPaidForArticle",
+          inputs: [
+            {
+              name: "tokenId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -225,6 +343,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "payArticle",
+          inputs: [
+            {
+              name: "tokenId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "payable",
+        },
+        {
+          type: "function",
           name: "publish",
           inputs: [
             {
@@ -236,6 +367,16 @@ const deployedContracts = {
               name: "title",
               type: "string",
               internalType: "string",
+            },
+            {
+              name: "price",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "priceToken",
+              type: "address",
+              internalType: "address",
             },
           ],
           outputs: [],
@@ -305,6 +446,29 @@ const deployedContracts = {
               name: "approved",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setArticlePrice",
+          inputs: [
+            {
+              name: "tokenId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "price",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "priceToken",
+              type: "address",
+              internalType: "address",
             },
           ],
           outputs: [],
@@ -385,6 +549,32 @@ const deployedContracts = {
           stateMutability: "nonpayable",
         },
         {
+          type: "function",
+          name: "usdc",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IERC20",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "usdcToken",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
           type: "event",
           name: "Approval",
           inputs: [
@@ -436,6 +626,31 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "ArticlePriceUpdated",
+          inputs: [
+            {
+              name: "tokenId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "price",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "priceToken",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "ArticlePublished",
           inputs: [
             {
@@ -455,6 +670,18 @@ const deployedContracts = {
               type: "string",
               indexed: false,
               internalType: "string",
+            },
+            {
+              name: "price",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "priceToken",
+              type: "address",
+              indexed: false,
+              internalType: "address",
             },
           ],
           anonymous: false,
@@ -484,6 +711,31 @@ const deployedContracts = {
           inputs: [
             {
               name: "_tokenId",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PaymentReceived",
+          inputs: [
+            {
+              name: "tokenId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "payer",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "amount",
               type: "uint256",
               indexed: false,
               internalType: "uint256",
@@ -621,7 +873,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1,
+      deployedOnBlock: 10,
     },
   },
 } as const;

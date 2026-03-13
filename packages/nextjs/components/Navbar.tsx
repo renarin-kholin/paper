@@ -25,10 +25,7 @@ export function Navbar() {
               const isActive = pathname === href;
               return (
                 <li key={href}>
-                  <Link
-                    href={href}
-                    className={isActive ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
-                  >
+                  <Link href={href} className={isActive ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}>
                     {label}
                   </Link>
                 </li>

@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
 import type { NextPage } from "next";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import type { Article } from "~~/hooks/useArticles";
@@ -84,7 +84,11 @@ function ArticleCardItem({ id }: { id: bigint }) {
 }
 
 const Home: NextPage = () => {
-  const { data: articleCount, isLoading: countLoading, refetch } = useScaffoldReadContract({
+  const {
+    data: articleCount,
+    isLoading: countLoading,
+    refetch,
+  } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "articleCount",
   });
@@ -96,6 +100,7 @@ const Home: NextPage = () => {
   }, []);
 
   // Force refetch when component mounts
+
   useEffect(() => {
     if (mounted) {
       refetch();
@@ -134,7 +139,7 @@ const Home: NextPage = () => {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: count }, (_, i) => BigInt(count - 1 - i)).map((id) => (
+            {Array.from({ length: count }, (_, i) => BigInt(count - 1 - i)).map(id => (
               <ArticleCardItem key={id.toString()} id={id} />
             ))}
           </div>

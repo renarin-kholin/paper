@@ -1,9 +1,20 @@
+// Token addresses
+export const ETH_ADDRESS = "0x0000000000000000000000000000000000000000";
+export const USDC_ADDRESS = ""; // TBD - not yet supported
+
+// Minimum prices
+export const MIN_ETH_PRICE = "100000000000000"; // 0.0001 ETH
+export const MIN_USDC_PRICE = "10000"; // 0.01 USDC (6 decimals) - not yet supported
+
 export interface ArticleMetadata {
   name: string;
   description: string;
   content: string;
+  preview: string; // First 200 chars
   author: string;
   createdAt: number;
+  price: string; // Price in wei (or USDC units)
+  priceToken: string; // ETH_ADDRESS or USDC_ADDRESS
   image?: string;
 }
 

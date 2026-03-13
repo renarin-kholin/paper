@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { fetchFromIPFS, type ArticleMetadata } from "~~/lib/ipfs";
+import { fetchFromIPFS } from "~~/lib/ipfs";
 
 export interface Article {
   id: bigint;

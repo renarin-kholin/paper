@@ -21,9 +21,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
     <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
       <div className="card-body">
         <Link href={`/article/${article.id}`}>
-          <h2 className="card-title text-lg hover:text-primary transition-colors">
-            {article.title}
-          </h2>
+          <h2 className="card-title text-lg hover:text-primary transition-colors">{article.title}</h2>
         </Link>
         <div className="flex items-center text-sm text-base-content/60 mt-2">
           <Link href={`/author/${article.author}`} className="flex items-center gap-1 hover:text-primary">

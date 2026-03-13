@@ -1,8 +1,8 @@
 import "@rainbow-me/rainbowkit/styles.css";
 import "@scaffold-ui/components/styles.css";
+import { Navbar } from "~~/components/Navbar";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import { ThemeProvider } from "~~/components/ThemeProvider";
-import { Navbar } from "~~/components/Navbar";
 import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
@@ -19,9 +19,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
           <ScaffoldEthAppWithProviders>
             <div className="min-h-screen bg-base-200">
               <Navbar />
-              <main className="container mx-auto px-4 py-8">
-                {children}
-              </main>
+              <main className="container mx-auto px-4 py-8">{children}</main>
             </div>
           </ScaffoldEthAppWithProviders>
         </ThemeProvider>

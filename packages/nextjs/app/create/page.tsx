@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
 import type { NextPage } from "next";
+import { useAccount } from "wagmi";
 import { Editor } from "~~/components/Editor";
 import { usePublishArticle } from "~~/hooks/usePublishArticle";
 
@@ -11,8 +11,8 @@ const CreatePage: NextPage = () => {
   const { isConnected } = useAccount();
   const { publish, isLoading, isMining, error } = usePublishArticle();
 
-  const handlePublish = async (title: string, content: string) => {
-    const tokenId = await publish({ title, content });
+  const handlePublish = async (title: string, content: string, price: string, priceToken: string) => {
+    const tokenId = await publish({ title, content, price, priceToken });
     if (tokenId !== undefined) {
       router.push("/");
     }
@@ -30,7 +30,7 @@ const CreatePage: NextPage = () => {
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Write an Article</h1>
-      
+
       {error && (
         <div className="alert alert-error mb-4">
           <span>{error}</span>
