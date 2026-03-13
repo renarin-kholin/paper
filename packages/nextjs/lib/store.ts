@@ -141,6 +141,10 @@ export const unlockPost = (userId: string, postId: string, price: number) => {
   const post = getPost(postId);
   if (!user || !post) return false;
 
+  if (user.unlockedPosts.includes(postId)) {
+    return true;
+  }
+
   const author = MOCK_USERS[post.authorId];
 
   if (user.balance >= price) {

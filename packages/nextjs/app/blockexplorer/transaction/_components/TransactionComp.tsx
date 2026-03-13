@@ -146,7 +146,7 @@ const TransactionComp = ({ txHash }: { txHash: Hash }) => {
                   <textarea
                     readOnly
                     value={transaction.input}
-                    className="p-0 w-full textarea-primary bg-inherit h-[150px]"
+                    className="p-0 w-full textarea-primary bg-inherit h-[150px] focus:!outline-none focus-visible:!outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-300 rounded-md"
                   />
                 </td>
               </tr>

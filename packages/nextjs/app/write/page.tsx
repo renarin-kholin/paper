@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Image as ImageIcon, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
+import { SimpleEditor } from "~~/components/tiptap-templates/simple/simple-editor";
 import { addPost, getCurrentUser } from "~~/lib/store";
 
 export default function WritePage() {
@@ -14,9 +15,18 @@ export default function WritePage() {
   const [paywallEnabled, setPaywallEnabled] = useState(false);
   const [accessPrice, setAccessPrice] = useState("5");
   const [showSettings, setShowSettings] = useState(false);
+  const parsedAccessPrice = Number(accessPrice);
+  const parsedAdPrice = Number(adPrice);
+  const plainTextContent = content.replace(/<[^>]*>?/gm, "");
+
+  const isPublishDisabled =
+    !title.trim() ||
+    !plainTextContent.trim() ||
+    (paywallEnabled && (!Number.isFinite(parsedAccessPrice) || parsedAccessPrice <= 0)) ||
+    (adEnabled && (!Number.isFinite(parsedAdPrice) || parsedAdPrice <= 0));
 
   const handlePublish = () => {
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !plainTextContent.trim()) return;
 
     const user = getCurrentUser();
     const newPost = {
@@ -26,9 +36,9 @@ export default function WritePage() {
       authorId: user.id,
       createdAt: new Date().toISOString(),
       adState: adEnabled ? "available" : "disabled",
-      adPrice: adEnabled ? parseFloat(adPrice) : undefined,
+      adPrice: adEnabled ? parsedAdPrice : undefined,
       isPaywalled: paywallEnabled,
-      accessPrice: paywallEnabled ? parseFloat(accessPrice) : undefined,
+      accessPrice: paywallEnabled ? parsedAccessPrice : undefined,
     } as const;
 
     addPost(newPost);
@@ -45,13 +55,17 @@ export default function WritePage() {
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="p-2 text-stone-500 hover:text-stone-900 transition-colors rounded-full hover:bg-stone-100"
+            type="button"
+            aria-expanded={showSettings}
+            aria-controls="post-settings"
           >
             <Settings className="w-5 h-5" />
           </button>
           <button
             onClick={handlePublish}
-            disabled={!title.trim() || !content.trim()}
-            className="bg-stone-900 text-white px-4 py-1.5 rounded-full text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isPublishDisabled}
+            className="bg-stone-900 text-white px-4 py-1.5 rounded-full text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+            type="button"
           >
             Publish
           </button>
@@ -59,7 +73,10 @@ export default function WritePage() {
       </div>
 
       {showSettings && (
-        <div className="mb-8 p-6 bg-white border border-stone-200 rounded-2xl shadow-sm">
+        <div
+          id="post-settings"
+          className="mb-8 p-6 bg-white border border-stone-200 rounded-2xl shadow-sm page-fade-in"
+        >
           <h3 className="text-lg font-bold text-stone-900 mb-4 font-serif">Monetization Settings</h3>
           <div className="space-y-6">
             {/* Paywall Settings */}
@@ -88,9 +105,10 @@ export default function WritePage() {
                     type="number"
                     value={accessPrice}
                     onChange={e => setAccessPrice(e.target.value)}
-                    className="w-full pl-8 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+                    className="w-full pl-8 pr-4 py-2 border border-stone-200 rounded-lg focus:!outline-none focus-visible:!outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300 transition-all shadow-sm"
                     placeholder="5.00"
-                    min="1"
+                    min="0.1"
+                    step="0.1"
                   />
                 </div>
                 <p className="text-xs text-stone-500 mt-2">Readers will pay this amount to unlock your post.</p>
@@ -125,9 +143,10 @@ export default function WritePage() {
                     type="number"
                     value={adPrice}
                     onChange={e => setAdPrice(e.target.value)}
-                    className="w-full pl-8 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+                    className="w-full pl-8 pr-4 py-2 border border-stone-200 rounded-lg focus:!outline-none focus-visible:!outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300 transition-all shadow-sm"
                     placeholder="25.00"
-                    min="1"
+                    min="0.1"
+                    step="0.1"
                   />
                 </div>
                 <p className="text-xs text-stone-500 mt-2">
@@ -139,27 +158,21 @@ export default function WritePage() {
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-6 page-fade-in">
         <input
           type="text"
           placeholder="Title"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          className="w-full text-5xl font-serif font-bold text-stone-900 placeholder:text-stone-300 focus:outline-none bg-transparent"
+          className="w-full text-4xl sm:text-5xl font-serif font-bold text-stone-900 placeholder:text-stone-300 !outline-none focus:!outline-none focus-visible:!outline-none bg-transparent transition-colors"
         />
 
-        <div className="relative group">
-          <div className="absolute -left-12 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
-            <button className="p-2 text-stone-400 hover:text-stone-900 rounded-full border border-stone-200 hover:border-stone-400 bg-white transition-all">
-              <ImageIcon className="w-5 h-5" />
-            </button>
-          </div>
-          <textarea
-            placeholder="Tell your story..."
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            className="w-full min-h-[50vh] text-xl text-stone-800 placeholder:text-stone-300 focus:outline-none resize-none bg-transparent leading-relaxed"
-          />
+        <div className="relative group min-h-[50vh]">
+          <SimpleEditor placeholder="Tell your story..." value={content} onChange={val => setContent(val)} />
+        </div>
+        <div className="flex justify-between text-xs text-stone-400 mt-2">
+          <span>{title.trim().length} title chars</span>
+          <span>{plainTextContent.trim().length} body chars</span>
         </div>
       </div>
     </div>

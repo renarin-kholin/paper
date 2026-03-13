@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, Wallet } from "lucide-react";
 
@@ -8,11 +8,20 @@ export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isConnecting, setIsConnecting] = useState(false);
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleConnectWallet = () => {
     setIsConnecting(true);
     // Simulate BitGo wallet connection
-    setTimeout(() => {
+    connectTimeoutRef.current = setTimeout(() => {
       setIsConnecting(false);
       setStep(2);
       // In a real app, we'd create a new user or update the existing one with the wallet address
@@ -25,10 +34,15 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto py-24">
+    <div className="max-w-md mx-auto py-16 sm:py-24 page-fade-in">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-serif font-bold text-stone-900 mb-4">Become a Creator</h1>
         <p className="text-stone-500 text-lg">Monetize your writing directly with decentralized ad spaces.</p>
+      </div>
+
+      <div className="mb-6 flex items-center justify-center gap-2" aria-label="Signup progress">
+        <span className={`h-1.5 w-10 rounded-full ${step >= 1 ? "bg-stone-900" : "bg-stone-200"}`}></span>
+        <span className={`h-1.5 w-10 rounded-full ${step >= 2 ? "bg-emerald-600" : "bg-stone-200"}`}></span>
       </div>
 
       <div className="bg-white p-8 rounded-3xl border border-stone-200 shadow-sm relative overflow-hidden">
@@ -48,6 +62,7 @@ export default function SignupPage() {
               onClick={handleConnectWallet}
               disabled={isConnecting}
               className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              type="button"
             >
               {isConnecting ? (
                 <>
@@ -79,6 +94,7 @@ export default function SignupPage() {
             <button
               onClick={handleComplete}
               className="w-full bg-emerald-600 text-white py-4 rounded-xl font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+              type="button"
             >
               Go to Dashboard
               <ArrowRight className="w-5 h-5" />

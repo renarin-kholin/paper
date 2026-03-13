@@ -1,1 +1,73 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import "../styles/_variables.scss";
+@import "../styles/_keyframe-animations.scss";
+
+:root {
+  --ease-out-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  scroll-behavior: smooth;
+}
+
+button,
+a,
+input,
+textarea {
+  transition:
+    color 180ms var(--ease-out-smooth),
+    background-color 180ms var(--ease-out-smooth),
+    border-color 180ms var(--ease-out-smooth),
+    box-shadow 180ms var(--ease-out-smooth),
+    transform 180ms var(--ease-out-smooth),
+    opacity 180ms var(--ease-out-smooth);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(41, 37, 36, 0.2);
+  outline-offset: 2px;
+}
+
+.page-fade-in {
+  animation: page-fade-in 340ms var(--ease-out-smooth) both;
+}
+
+.lift-on-hover {
+  transition:
+    transform 220ms var(--ease-out-smooth),
+    box-shadow 220ms var(--ease-out-smooth);
+}
+
+.lift-on-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px -16px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

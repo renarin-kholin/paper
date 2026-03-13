@@ -11,9 +11,10 @@ import { getCurrentUser, getPost, getUser, unlockPost, updatePost } from "~~/lib
 export default function PostPage() {
   const params = useParams();
   const postId = params.id as string;
-  const post = getPost(postId);
+  const [post, setPost] = useState(() => getPost(postId));
   const author = post ? getUser(post.authorId) : null;
   const currentUser = getCurrentUser();
+  const [hasUnlocked, setHasUnlocked] = useState(() => currentUser.unlockedPosts?.includes(postId));
 
   const [isSponsoring, setIsSponsoring] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -23,7 +24,6 @@ export default function PostPage() {
   }
 
   const isAuthor = currentUser.id === post.authorId;
-  const hasUnlocked = currentUser.unlockedPosts?.includes(post.id);
   const showPaywall = post.isPaywalled && !isAuthor && !hasUnlocked;
 
   const handleUnlock = () => {
@@ -31,11 +31,13 @@ export default function PostPage() {
     setTimeout(() => {
       const success = unlockPost(currentUser.id, post.id, post.accessPrice || 0);
       if (success) {
-        window.location.reload();
+        setHasUnlocked(true);
       } else {
         alert("Insufficient balance to unlock this post.");
         setIsUnlocking(false);
+        return;
       }
+      setIsUnlocking(false);
     }, 1000);
   };
 
@@ -53,15 +55,15 @@ export default function PostPage() {
           expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // 1 day
         },
       });
+      setPost(getPost(postId));
       setIsSponsoring(false);
-      window.location.reload();
     }, 1500);
   };
 
   return (
-    <article className="max-w-3xl mx-auto py-12">
+    <article className="max-w-3xl mx-auto py-8 sm:py-12 page-fade-in">
       <header className="mb-12">
-        <h1 className="text-5xl font-serif font-bold text-stone-900 mb-8 leading-tight">{post.title}</h1>
+        <h1 className="text-4xl sm:text-5xl font-serif font-bold text-stone-900 mb-8 leading-tight">{post.title}</h1>
 
         <div className="flex items-center gap-4 pb-8 border-b border-stone-100">
           {author.avatarUrl && (
@@ -89,7 +91,7 @@ export default function PostPage() {
         </div>
       </header>
 
-      <div className="prose prose-stone prose-lg max-w-none mb-16 font-serif leading-relaxed text-stone-800 relative">
+      <div className="prose prose-stone prose-base sm:prose-lg max-w-none mb-16 font-serif leading-relaxed text-stone-800 relative">
         {showPaywall ? (
           <>
             <div className="h-64 overflow-hidden relative">
@@ -107,7 +109,8 @@ export default function PostPage() {
               <button
                 onClick={handleUnlock}
                 disabled={isUnlocking}
-                className="bg-stone-900 text-white px-8 py-3 rounded-full font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 text-lg"
+                className="bg-stone-900 text-white px-8 py-3 rounded-full font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 text-lg active:scale-95"
+                type="button"
               >
                 {isUnlocking ? "Processing..." : `Unlock for $${post.accessPrice?.toFixed(2)}`}
               </button>
@@ -138,7 +141,8 @@ export default function PostPage() {
                 <button
                   onClick={handleSponsor}
                   disabled={isSponsoring}
-                  className="bg-stone-900 text-white px-6 py-2.5 rounded-full font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="bg-stone-900 text-white px-6 py-2.5 rounded-full font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 flex items-center gap-2 active:scale-95"
+                  type="button"
                 >
                   {isSponsoring ? "Processing..." : `Buy for $${post.adPrice}`}
                 </button>
