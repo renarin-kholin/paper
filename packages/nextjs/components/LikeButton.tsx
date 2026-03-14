@@ -18,19 +18,19 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
   const [isAnimating, setIsAnimating] = useState(false);
 
   const { data: likeCount } = useScaffoldReadContract({
-    contractName: "Paper",
+    contractName: "Social",
     functionName: "likeCount" as any,
     args: [articleId] as any,
   });
 
   const { data: hasLiked } = useScaffoldReadContract({
-    contractName: "Paper",
+    contractName: "Social",
     functionName: "hasLiked" as any,
     args: connectedAddress && articleId ? ([articleId, connectedAddress] as any) : undefined,
     query: { enabled: Boolean(connectedAddress && articleId) },
   });
 
-  const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "Paper" });
+  const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "Social" });
 
   const handleClick = async () => {
     if (!isConnected) {

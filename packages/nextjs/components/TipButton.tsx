@@ -9,18 +9,17 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { fetchPriceFromUniswap } from "~~/utils/scaffold-eth/fetchPriceFromUniswap";
 
 interface TipButtonProps {
-  articleId?: bigint;
   authorAddress: string;
   className?: string;
 }
 
 const USD_AMOUNTS = [1, 5, 10];
 
-export function TipButton({ articleId, authorAddress, className = "" }: TipButtonProps) {
+export function TipButton({ authorAddress, className = "" }: TipButtonProps) {
   const router = useRouter();
   const { address: connectedAddress, isConnected } = useAccount();
   const { targetNetwork } = useTargetNetwork();
-  const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "Paper" });
+  const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "Social" });
 
   const [isOpen, setIsOpen] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
@@ -59,19 +58,11 @@ export function TipButton({ articleId, authorAddress, className = "" }: TipButto
     const weiValue = BigInt(Math.ceil(parseFloat(ethAmount) * 1e18));
 
     try {
-      if (articleId) {
-        await writeContractAsync({
-          functionName: "tipAuthor" as any,
-          args: [articleId] as any,
-          value: weiValue,
-        });
-      } else {
-        await writeContractAsync({
-          functionName: "tipUser" as any,
-          args: [authorAddress] as any,
-          value: weiValue,
-        });
-      }
+      await writeContractAsync({
+        functionName: "tipAuthor" as any,
+        args: [authorAddress] as any,
+        value: weiValue,
+      });
       setIsOpen(false);
     } catch (err) {
       console.error("Tip failed:", err);

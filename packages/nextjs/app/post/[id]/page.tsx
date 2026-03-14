@@ -116,7 +116,7 @@ export default function PostPage() {
           </div>
           <div className="flex items-center gap-3">
             <LikeButton articleId={tokenId} showCount={true} />
-            <TipButton articleId={tokenId} authorAddress={author} />
+            <TipButton authorAddress={author} />
           </div>
         </div>
       </header>

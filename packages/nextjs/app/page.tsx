@@ -135,20 +135,6 @@ export default function Home() {
     functionName: "articleCount",
   });
 
-  const { data: followingList } = useScaffoldReadContract({
-    contractName: "Paper",
-    functionName: "getFollowing" as any,
-    args: address ? ([address] as any) : undefined,
-    query: { enabled: Boolean(address) },
-  });
-
-  const followedAuthors = useMemo(() => {
-    if (!followingList) return new Set<string>();
-    const list = followingList as unknown;
-    if (!Array.isArray(list)) return new Set<string>();
-    return new Set((list as string[]).map(a => a.toLowerCase()));
-  }, [followingList]);
-
   const count = articleCount ? Number(articleCount) : 0;
   const postIds = Array.from({ length: count }, (_, i) => BigInt(count - 1 - i));
 
@@ -156,8 +142,6 @@ export default function Home() {
     if (feedTab === "for-you" || !address) return postIds;
     return postIds;
   }, [address, feedTab, postIds]);
-
-  const showFollowingEmpty = feedTab === "following" && address && followedAuthors.size === 0;
 
   return (
     <div className="flex flex-col lg:flex-row w-full page-fade-in">
@@ -186,14 +170,7 @@ export default function Home() {
 
           {visibleIds.length === 0 && (
             <div className="rounded-2xl border border-stone-200 bg-stone-50 p-8 text-center text-stone-500">
-              {feedTab === "for-you" ? "No posts yet. Be the first to publish!" : "No posts from followed authors yet."}
-            </div>
-          )}
-
-          {showFollowingEmpty && (
-            <div className="rounded-2xl border border-stone-200 bg-stone-50 p-8 text-center">
-              <p className="text-stone-500 mb-4">You are not following anyone yet.</p>
-              <p className="text-sm text-stone-400">Follow authors to see their posts here.</p>
+              No posts yet. Be the first to publish!
             </div>
           )}
         </div>

@@ -16,13 +16,13 @@ export function FollowButton({ targetAddress, className = "" }: FollowButtonProp
   const [isHovering, setIsHovering] = useState(false);
 
   const { data: isFollowing } = useScaffoldReadContract({
-    contractName: "Paper",
+    contractName: "Social",
     functionName: "isFollowing" as any,
     args: connectedAddress && targetAddress ? ([connectedAddress, targetAddress] as any) : undefined,
     query: { enabled: Boolean(connectedAddress && targetAddress) },
   });
 
-  const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "Paper" });
+  const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "Social" });
 
   const isOwnProfile = connectedAddress?.toLowerCase() === targetAddress?.toLowerCase();
 
