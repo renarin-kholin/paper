@@ -1,12 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 
 export function SearchBar() {
+  const router = useRouter();
   const [isFocused, setIsFocused] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && query.trim()) {
+      e.preventDefault();
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    }
+  };
+
+  const handleClear = () => {
+    setQuery("");
+    inputRef.current?.focus();
+  };
 
   // Handle Cmd+K / Ctrl+K to focus search
   useEffect(() => {
@@ -40,6 +54,7 @@ export function SearchBar() {
         onChange={e => setQuery(e.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
+        onKeyDown={handleSearch}
         placeholder="Search"
         aria-label="Search"
         aria-keyshortcuts="meta+k"
@@ -52,10 +67,8 @@ export function SearchBar() {
           <button
             type="button"
             onMouseDown={e => {
-              // use onMouseDown to prevent blur before clear
               e.preventDefault();
-              setQuery("");
-              inputRef.current?.focus();
+              handleClear();
             }}
             className="p-1 rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-200 transition-colors focus:outline-none focus:ring-2 focus:ring-stone-400"
             aria-label="Clear search"

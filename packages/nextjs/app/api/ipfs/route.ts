@@ -4,6 +4,36 @@ export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
 
+  // Handle image upload (when action=addImage)
+  if (action === "addImage") {
+    try {
+      const body = await request.arrayBuffer();
+      const buffer = Buffer.from(body);
+
+      // Get content type from header or detect from buffer
+      const contentType = request.headers.get("content-type") || "application/octet-stream";
+
+      // Upload image to local IPFS node
+      const formData = new FormData();
+      formData.append("file", new Blob([buffer], { type: contentType }), "image");
+
+      const response = await fetch("http://127.0.0.1:5001/api/v0/add", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`IPFS image upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return NextResponse.json({ cid: result.Hash, contentType });
+    } catch (error) {
+      console.error("IPFS image upload error:", error);
+      return NextResponse.json({ error: "Failed to upload image to IPFS" }, { status: 500 });
+    }
+  }
+
   // Handle upload (when action=add)
   if (action === "add") {
     try {

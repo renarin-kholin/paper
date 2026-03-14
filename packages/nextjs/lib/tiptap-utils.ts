@@ -1,3 +1,4 @@
+import { getIPFSGatewayUrl } from "./ipfs";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 import { AllSelection, NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
@@ -318,6 +319,13 @@ export function selectionWithinConvertibleTypes(editor: Editor, types: string[] 
 }
 
 /**
+ * Converts an IPFS CID to a gateway URL for viewing
+ */
+export function toGatewayUrl(cid: string): string {
+  return getIPFSGatewayUrl(cid);
+}
+
+/**
  * Handles image upload with progress tracking and abort capability
  * @param file The file to upload
  * @param onProgress Optional callback for tracking upload progress
@@ -338,17 +346,44 @@ export const handleImageUpload = async (
     throw new Error(`File size exceeds maximum allowed (${MAX_FILE_SIZE / (1024 * 1024)}MB)`);
   }
 
-  // For demo/testing: Simulate upload progress. In production, replace the following code
-  // with your own upload implementation.
-  for (let progress = 0; progress <= 100; progress += 10) {
-    if (abortSignal?.aborted) {
+  // Report initial progress
+  onProgress?.({ progress: 0 });
+
+  try {
+    // Read file as ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    onProgress?.({ progress: 20 });
+
+    // Upload to IPFS via our API route
+    const response = await fetch("/api/ipfs?action=addImage", {
+      method: "POST",
+      body: arrayBuffer,
+      headers: {
+        "Content-Type": file.type || "application/octet-stream",
+      },
+      signal: abortSignal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to upload image");
+    }
+
+    onProgress?.({ progress: 80 });
+
+    const result = await response.json();
+    const cid = result.cid;
+
+    onProgress?.({ progress: 100 });
+
+    // Return IPFS gateway URL for the image
+    return toGatewayUrl(cid);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
       throw new Error("Upload cancelled");
     }
-    await new Promise(resolve => setTimeout(resolve, 500));
-    onProgress?.({ progress });
+    throw error;
   }
-
-  return "/images/tiptap-ui-placeholder-image.jpg";
 };
 
 type ProtocolOptions = {

@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "./DeployHelpers.s.sol";
 import { DeployPaper } from "./DeployPaper.s.sol";
+import { DeploySocial } from "./DeploySocial.s.sol";
 
 /**
  * @notice Main deployment script for all contracts
@@ -12,12 +13,12 @@ import { DeployPaper } from "./DeployPaper.s.sol";
  */
 contract DeployScript is ScaffoldETHDeploy {
     function run() external {
-        // Deploy Paper contract
+        // Deploy Paper contract (core publishing)
         DeployPaper deployPaper = new DeployPaper();
         deployPaper.run();
 
-        // Deploy another contract
-        // DeployMyContract myContract = new DeployMyContract();
-        // myContract.run();
+        // Deploy Social contract (follows, likes, tips)
+        DeploySocial deploySocial = new DeploySocial();
+        deploySocial.run();
     }
 }

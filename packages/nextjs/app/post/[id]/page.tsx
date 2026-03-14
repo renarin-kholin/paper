@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAccount } from "wagmi";
+import { CommentSection } from "~~/components/CommentSection";
+import { LikeButton } from "~~/components/LikeButton";
+import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { type ArticleMetadata, ETH_ADDRESS, fetchFromIPFS } from "~~/lib/ipfs";
+import { type ArticleMetadata, ETH_ADDRESS, calculateReadTime, fetchFromIPFS } from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
 
@@ -33,7 +37,7 @@ export default function PostPage() {
   const { data: hasPaid } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "hasPaidForArticle",
-    args: address ? [tokenId, address] : undefined,
+    args: address ? ([tokenId, address] as any) : undefined,
     query: { enabled: Boolean(address) },
   });
 
@@ -62,6 +66,10 @@ export default function PostPage() {
   const [author, createdAt, title, price, priceToken] = useMemo(() => {
     return (meta || ["", 0n, "", 0n, ETH_ADDRESS]) as ArticleMetaTuple;
   }, [meta]);
+
+  const readTime = useMemo(() => {
+    return content?.content ? calculateReadTime(content.content) : 1;
+  }, [content]);
 
   const isAuthor = Boolean(address && author && address.toLowerCase() === author.toLowerCase());
   const isPaid = Boolean(hasPaid);
@@ -97,16 +105,23 @@ export default function PostPage() {
       <header className="mb-12">
         <h1 className="text-4xl sm:text-5xl font-serif font-bold text-stone-900 mb-8 leading-tight">{title}</h1>
 
-        <div className="flex items-center gap-4 pb-8 border-b border-stone-100">
+        <div className="flex items-center justify-between pb-8 border-b border-stone-100">
           <div>
-            <div className="font-medium text-stone-900">
+            <Link
+              href={`/profile/${author}`}
+              className="font-medium text-stone-900 hover:text-stone-600 transition-colors"
+            >
               {author.slice(0, 6)}...{author.slice(-4)}
-            </div>
+            </Link>
             <div className="text-sm text-stone-500 flex items-center gap-2">
               <span>{new Date(Number(createdAt) * 1000).toLocaleDateString()}</span>
               <span>·</span>
-              <span>4 min read</span>
+              <span>{readTime} min read</span>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <LikeButton articleId={tokenId} showCount={true} />
+            <TipButton authorAddress={author} />
           </div>
         </div>
       </header>
@@ -144,6 +159,8 @@ export default function PostPage() {
           <ReactMarkdown>{articleBody || "Content could not be loaded."}</ReactMarkdown>
         )}
       </div>
+
+      <CommentSection articleId={tokenId} />
 
       {contentError && <p className="text-sm text-red-600">{contentError}</p>}
     </article>
