@@ -1,83 +1,101 @@
-# 🏗 Scaffold-ETH 2
+<p align="center">
+  <img src="./logo.png" alt="Paper" width="200"/>
+</p>
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
+A decentralized publishing platform built for **ETHMumbai 2026** in conjunction with **PaperBot**.
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+---
 
-> [!NOTE]
-> 🤖 Scaffold-ETH 2 is AI-ready! It has everything agents need to build on Ethereum. Check `.agents/`, `.claude/`, `.opencode` or `.cursor/` for more info.
+## Tech Stack
 
-⚙️ Built using NextJS, RainbowKit, Foundry, Wagmi, Viem, and Typescript.
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js, React, TypeScript, Tailwind CSS |
+| Web3 | Wagmi, Viem, RainbowKit, x402 endpoints, ENS subnames |
+| Smart Contracts | Foundry (Solidity), ERC-721 NFTs |
+| Storage | IPFS (via Pinata) |
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🪝 **[Custom hooks](https://docs.scaffoldeth.io/hooks/)**: Collection of React hooks wrapper around [wagmi](https://wagmi.sh/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.scaffoldeth.io/components/): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
+---
 
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
+## What is this
 
-## Requirements
+A blockchain-based publishing platform where creators can publish articles as NFTs. Articles can be free or paid, with the platform supporting micro-payments via x402 protocol. Readers can unlock paid content by paying ETH or USDC directly to authors.
 
-Before you begin, you need to install the following tools:
+### Key Features
 
-- [Node (>= v20.18.3)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
+- **Publishing**: Create articles stored on IPFS, each tokenized as an ERC-721 NFT
+- **Monetization**: Set custom prices for articles (ETH or USDC), readers pay via x402 to unlock full content
+- **Ad Campaigns**: Run sponsored post campaigns on the platform
+- **Profiles**: On-chain user profiles with ENS subname support for custom usernames
+- **Bookmarks**: Save articles for later reading
 
-## Quickstart
+---
 
-To get started with Scaffold-ETH 2, follow the steps below:
+## Screenshots
 
-1. Install dependencies if it was skipped in CLI:
+<p align="center">
+  <img src="./screenshots/screenshot1.png" alt="Home Page" width="400"/>
+  <img src="./screenshots/screenshot2.png" alt="Article View" width="400"/>
+</p>
 
-```
-cd my-dapp-example
+---
+
+## Getting Started
+
+```bash
+# Install dependencies
 yarn install
-```
 
-2. Run a local network in the first terminal:
-
-```
+# Start local blockchain
 yarn chain
-```
 
-This command starts a local Ethereum network using Foundry. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `packages/foundry/foundry.toml`.
-
-3. On a second terminal, deploy the test contract:
-
-```
+# Deploy contracts
 yarn deploy
-```
 
-This command deploys a test smart contract to the local network. The contract is located in `packages/foundry/contracts` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/foundry/script` to deploy the contract to the network. You can also customize the deploy script.
-
-4. On a third terminal, start your NextJS app:
-
-```
+# Start frontend
 yarn start
 ```
 
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page. You can tweak the app config in `packages/nextjs/scaffold.config.ts`.
+After deployment, ABIs are auto-generated to `packages/nextjs/contracts/deployedContracts.ts`.
 
-Run smart contract test with `yarn foundry:test`
+### Environment Variables
 
-- Edit your smart contracts in `packages/foundry/contracts`
-- Edit your frontend homepage at `packages/nextjs/app/page.tsx`. For guidance on [routing](https://nextjs.org/docs/app/building-your-application/routing/defining-routes) and configuring [pages/layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) checkout the Next.js documentation.
-- Edit your deployment scripts in `packages/foundry/script`
+Copy `.env.example` to `.env` and configure:
 
+- `NEXT_PUBLIC_RPC_URL`:  RPC endpoint (defaults to local Anvil)
+- `NEXT_PUBLIC_PAPER_CONTRACT_ADDRESS`: Paper contract address
+- `NEXT_PUBLIC_SOCIAL_CONTRACT_ADDRESS`: Social contract address
+- `NEXT_PUBLIC_AD_CAMPAIGNS_CONTRACT_ADDRESS`: AdCampaigns contract address
+- `NEXT_PUBLIC_PINATA_GATEWAY`: IPFS gateway
+- `NEXT_PUBLIC_X402_FACILITATOR_URL`: x402 facilitator URL
 
-## Documentation
+### Network
 
-Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building with Scaffold-ETH 2.
+The contracts are deployed on **Base Sepolia** testnet.
 
-To know more about its features, check out our [website](https://scaffoldeth.io).
+Visit `http://localhost:3000` to use the app.
 
-## Contributing to Scaffold-ETH 2
+---
 
-We welcome contributions to Scaffold-ETH 2!
+## Project Structure
 
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+```
+packages/
+├── foundry/
+│   ├── contracts/      # Smart contracts (Paper.sol, AdCampaigns.sol, Social.sol)
+│   └── script/         # Deployment scripts
+└── nextjs/
+    └── app/            # Next.js frontend (App Router)
+```
+
+---
+
+## License
+
+MIT
+
+---
+
+## Credits
+
+Built on top of [Scaffold-ETH 2](https://github.com/scaffold-eth/scaffold-eth-2).
