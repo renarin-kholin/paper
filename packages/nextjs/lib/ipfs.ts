@@ -33,6 +33,34 @@ export interface UserProfile {
   updatedAt: number;
 }
 
+export interface Comment {
+  author: string;
+  body: string;
+  createdAt: number;
+}
+
+const WORDS_PER_MINUTE = 200;
+
+export function calculateReadTime(content: string): number {
+  if (!content) return 1;
+
+  const plainText = content
+    .replace(/<[^>]*>/g, "")
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^[#>*\-\d.\s]+/gm, "")
+    .replace(/[*_~]/g, "");
+
+  const wordCount = plainText
+    .trim()
+    .split(/\s+/)
+    .filter(word => word.length > 0).length;
+  const minutes = Math.ceil(wordCount / WORDS_PER_MINUTE);
+  return Math.max(1, minutes);
+}
+
 export async function uploadToIPFS(data: ArticleMetadata): Promise<string> {
   const jsonString = JSON.stringify(data);
   const encoder = new TextEncoder();
@@ -137,4 +165,44 @@ export async function uploadImageToIPFS(file: File): Promise<string> {
 
   const result = await response.json();
   return result.cid;
+}
+
+export async function uploadCommentToIPFS(data: Comment): Promise<string> {
+  const jsonString = JSON.stringify(data);
+  const encoder = new TextEncoder();
+  const buffer = encoder.encode(jsonString);
+
+  const response = await fetch("/api/ipfs?action=add", {
+    method: "POST",
+    body: buffer,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`IPFS comment upload failed: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  return result.cid;
+}
+
+export async function fetchCommentFromIPFS<CID extends string>(cid: CID): Promise<Comment> {
+  const encoder = new TextEncoder();
+  const body = encoder.encode(cid);
+
+  const response = await fetch("/api/ipfs", {
+    method: "POST",
+    body: body,
+    headers: {
+      "Content-Type": "text/plain",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`IPFS comment fetch failed: ${response.statusText}`);
+  }
+
+  return response.json() as Promise<Comment>;
 }

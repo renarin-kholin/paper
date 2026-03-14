@@ -11,7 +11,7 @@ import { LikeButton } from "~~/components/LikeButton";
 import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowerCount, useFollowingCount } from "~~/hooks/scaffold-eth/useFollowingList";
-import { UserProfile, fetchFromIPFS, fetchProfileFromIPFS, getIPFSGatewayUrl } from "~~/lib/ipfs";
+import { UserProfile, calculateReadTime, fetchFromIPFS, fetchProfileFromIPFS, getIPFSGatewayUrl } from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
 
@@ -30,6 +30,7 @@ const toPreviewText = (raw?: string) => {
 
 function AuthorPostCard({ id }: { id: bigint }) {
   const [preview, setPreview] = useState("");
+  const [readTime, setReadTime] = useState<number | null>(null);
 
   const { data: meta } = useScaffoldReadContract({
     contractName: "Paper",
@@ -51,6 +52,9 @@ function AuthorPostCard({ id }: { id: bigint }) {
         if (!active) return;
         const normalizedPreview = toPreviewText(data.preview || data.description || data.content || "");
         setPreview(normalizedPreview.slice(0, 220));
+        if (data.content) {
+          setReadTime(calculateReadTime(data.content));
+        }
       })
       .catch(() => {
         if (!active) return;
@@ -90,7 +94,7 @@ function AuthorPostCard({ id }: { id: bigint }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
             {isPaywalled && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
             <LikeButton articleId={id} />
-            <span>4 min read</span>
+            <span>{readTime ?? 1} min read</span>
           </div>
           <div className="flex items-center gap-3 text-stone-400">
             <button className="hover:text-stone-900 active:scale-95" type="button" aria-label="Bookmark post">

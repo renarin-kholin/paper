@@ -6,10 +6,11 @@ import { useParams } from "next/navigation";
 import { Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAccount } from "wagmi";
+import { CommentSection } from "~~/components/CommentSection";
 import { LikeButton } from "~~/components/LikeButton";
 import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { type ArticleMetadata, ETH_ADDRESS, fetchFromIPFS } from "~~/lib/ipfs";
+import { type ArticleMetadata, ETH_ADDRESS, calculateReadTime, fetchFromIPFS } from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
 
@@ -66,6 +67,10 @@ export default function PostPage() {
     return (meta || ["", 0n, "", 0n, ETH_ADDRESS]) as ArticleMetaTuple;
   }, [meta]);
 
+  const readTime = useMemo(() => {
+    return content?.content ? calculateReadTime(content.content) : 1;
+  }, [content]);
+
   const isAuthor = Boolean(address && author && address.toLowerCase() === author.toLowerCase());
   const isPaid = Boolean(hasPaid);
   const showPaywall = price > 0n && !isAuthor && !isPaid;
@@ -111,7 +116,7 @@ export default function PostPage() {
             <div className="text-sm text-stone-500 flex items-center gap-2">
               <span>{new Date(Number(createdAt) * 1000).toLocaleDateString()}</span>
               <span>·</span>
-              <span>4 min read</span>
+              <span>{readTime} min read</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -154,6 +159,8 @@ export default function PostPage() {
           <ReactMarkdown>{articleBody || "Content could not be loaded."}</ReactMarkdown>
         )}
       </div>
+
+      <CommentSection articleId={tokenId} />
 
       {contentError && <p className="text-sm text-red-600">{contentError}</p>}
     </article>

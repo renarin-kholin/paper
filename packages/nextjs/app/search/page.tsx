@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { BookmarkPlus, Search as SearchIcon, Star } from "lucide-react";
 import { LikeButton } from "~~/components/LikeButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { fetchFromIPFS } from "~~/lib/ipfs";
+import { calculateReadTime, fetchFromIPFS } from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
 
@@ -26,6 +26,7 @@ const toPreviewText = (raw?: string) => {
 
 function SearchResultCard({ id }: { id: bigint }) {
   const [preview, setPreview] = useState("");
+  const [readTime, setReadTime] = useState<number | null>(null);
 
   const { data: meta } = useScaffoldReadContract({
     contractName: "Paper",
@@ -47,6 +48,9 @@ function SearchResultCard({ id }: { id: bigint }) {
         if (!active) return;
         const normalizedPreview = toPreviewText(data.preview || data.description || data.content || "");
         setPreview(normalizedPreview.slice(0, 220));
+        if (data.content) {
+          setReadTime(calculateReadTime(data.content));
+        }
       })
       .catch(() => {
         if (!active) return;
@@ -96,7 +100,7 @@ function SearchResultCard({ id }: { id: bigint }) {
             <LikeButton articleId={id} />
             <span>{new Date(Number(createdAt) * 1000).toLocaleDateString()}</span>
             <span>·</span>
-            <span>4 min read</span>
+            <span>{readTime ?? 1} min read</span>
           </div>
           <div className="flex items-center gap-3 text-stone-400">
             <button className="hover:text-stone-900 active:scale-95" type="button" aria-label="Bookmark post">
