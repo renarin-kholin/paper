@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Address } from "@scaffold-ui/components";
 import { BookmarkPlus, Globe, Loader2, Star, Twitter, User, Users } from "lucide-react";
+import { getAddress, isAddress } from "viem";
 import { useAccount } from "wagmi";
+import { useEnsAddress } from "wagmi";
 import { FollowButton } from "~~/components/FollowButton";
 import { LikeButton } from "~~/components/LikeButton";
 import { TipButton } from "~~/components/TipButton";
@@ -138,7 +141,29 @@ function FollowStats({ address }: { address: string }) {
 
 export default function PublicProfilePage() {
   const params = useParams();
-  const address = params?.address as string;
+  const routeParam = useMemo(() => {
+    try {
+      return decodeURIComponent((params?.address as string) || "").trim();
+    } catch {
+      return "";
+    }
+  }, [params?.address]);
+
+  const isEnsParam = routeParam.toLowerCase().endsWith(".eth");
+  const isAddressParam = isAddress(routeParam);
+
+  const { data: ensResolvedAddress, isLoading: isEnsLoading } = useEnsAddress({
+    name: isEnsParam ? routeParam : undefined,
+    chainId: 1,
+    query: { enabled: isEnsParam },
+  });
+
+  const resolvedAddress = useMemo(() => {
+    if (isAddressParam) return getAddress(routeParam);
+    if (isEnsParam && ensResolvedAddress) return getAddress(ensResolvedAddress);
+    return undefined;
+  }, [ensResolvedAddress, isAddressParam, isEnsParam, routeParam]);
+
   const { address: connectedAddress } = useAccount();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -146,18 +171,21 @@ export default function PublicProfilePage() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isOwnProfile = connectedAddress?.toLowerCase() === address?.toLowerCase();
+  const isOwnProfile =
+    Boolean(connectedAddress && resolvedAddress) && connectedAddress?.toLowerCase() === resolvedAddress?.toLowerCase();
 
   const { data: profileCID, isLoading: isContractLoading } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "getUserProfileCID" as any,
-    args: address ? ([address] as any) : undefined,
+    args: resolvedAddress ? ([resolvedAddress] as any) : undefined,
+    query: { enabled: Boolean(resolvedAddress) },
   });
 
   const { data: articleIdsData } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "getArticlesByAuthor" as any,
-    args: address ? ([address] as any) : undefined,
+    args: resolvedAddress ? ([resolvedAddress] as any) : undefined,
+    query: { enabled: Boolean(resolvedAddress) },
   });
 
   const articleIds = useMemo(() => {
@@ -169,9 +197,13 @@ export default function PublicProfilePage() {
 
   useEffect(() => {
     async function loadProfile() {
-      if (!address || isContractLoading) {
+      if (!resolvedAddress || isContractLoading) {
         return;
       }
+
+      setProfile(null);
+      setAvatarPreview(null);
+      setCoverPreview(null);
 
       try {
         if (profileCID) {
@@ -194,15 +226,33 @@ export default function PublicProfilePage() {
       }
     }
 
-    if (address && !isContractLoading) {
+    if (resolvedAddress && !isContractLoading) {
       loadProfile();
+    } else if (!isContractLoading) {
+      setIsLoading(false);
     }
-  }, [profileCID, address, isContractLoading]);
+  }, [profileCID, resolvedAddress, isContractLoading]);
 
-  if (!address) {
+  if (!routeParam) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <p className="text-stone-500">Invalid address</p>
+      </div>
+    );
+  }
+
+  if (isEnsLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
+      </div>
+    );
+  }
+
+  if (!resolvedAddress) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-stone-500">Profile not found for this ENS or address.</p>
       </div>
     );
   }
@@ -215,7 +265,8 @@ export default function PublicProfilePage() {
     );
   }
 
-  const displayName = profile?.name || `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const displayName =
+    profile?.name || (isEnsParam ? routeParam : `${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)}`);
   const displayBio = profile?.bio || "This author hasn't added a bio yet.";
 
   return (
@@ -249,13 +300,16 @@ export default function PublicProfilePage() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-stone-900 mb-2">{displayName}</h1>
+            <div className="text-stone-500 text-sm mb-2">
+              <Address address={resolvedAddress} onlyEnsOrAddress disableAddressLink size="base" />
+            </div>
             <p className="text-stone-600 text-lg mb-3">{displayBio}</p>
-            <FollowStats address={address} />
+            <FollowStats address={resolvedAddress} />
           </div>
           {!isOwnProfile && (
             <div className="flex items-center gap-2">
-              <TipButton authorAddress={address} />
-              <FollowButton targetAddress={address} />
+              <TipButton authorAddress={resolvedAddress} />
+              <FollowButton targetAddress={resolvedAddress} />
             </div>
           )}
           {isOwnProfile && (

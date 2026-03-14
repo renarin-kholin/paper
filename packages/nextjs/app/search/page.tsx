@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Address } from "@scaffold-ui/components";
 import { BookmarkPlus, Search as SearchIcon, Star } from "lucide-react";
 import { LikeButton } from "~~/components/LikeButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -83,7 +84,7 @@ function SearchResultCard({ id }: { id: bigint }) {
             href={`/profile/${author}`}
             className="text-sm font-medium text-stone-900 hover:text-stone-600 transition-colors"
           >
-            {author.slice(0, 6)}...{author.slice(-4)}
+            <Address address={author} onlyEnsOrAddress disableAddressLink size="base" />
           </Link>
         </div>
         <Link href={`/post/${id.toString()}`} className="block mb-2 rounded-md focus-visible:outline-none">

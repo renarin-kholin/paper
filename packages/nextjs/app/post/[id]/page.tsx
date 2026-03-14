@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Address } from "@scaffold-ui/components";
 import { Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAccount } from "wagmi";
@@ -111,7 +112,7 @@ export default function PostPage() {
               href={`/profile/${author}`}
               className="font-medium text-stone-900 hover:text-stone-600 transition-colors"
             >
-              {author.slice(0, 6)}...{author.slice(-4)}
+              <Address address={author} onlyEnsOrAddress disableAddressLink size="base" />
             </Link>
             <div className="text-sm text-stone-500 flex items-center gap-2">
               <span>{new Date(Number(createdAt) * 1000).toLocaleDateString()}</span>
