@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useBalance } from "@scaffold-ui/hooks";
 import { ChevronDown, CircleDot, User, Wallet } from "lucide-react";
 import { hardhat } from "viem/chains";
 import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
@@ -64,6 +65,8 @@ export const UserMenu = () => {
     address,
   });
 
+  const balance = useBalance({ address, chain: chain! });
+
   useOutsideClick(menuRef, () => {
     menuRef.current?.removeAttribute("open");
   });
@@ -98,8 +101,14 @@ export const UserMenu = () => {
             </span>
           </div>
           {isConnected && (
-            <div className="mb-2 rounded-md bg-white/80 px-2 py-1 text-xs text-stone-500 border border-stone-200">
-              {username}
+            <div className="flex flex-col ">
+              <div className="mb-2 rounded-md bg-white/80 px-2 py-1 text-xs text-stone-500 border border-stone-200">
+                {/*{ensName || `${address?.slice(0, 6)}...${address?.slice(-4)}`}*/}
+                {username}
+              </div>
+              <div className="mb-2 rounded-md bg-white/80 px-2 py-1 text-xs text-stone-500 border border-stone-200">
+                {balance.formattedBalance ?? 0} ETH
+              </div>
             </div>
           )}
 
