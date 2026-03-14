@@ -1,6 +1,7 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "Paper",
+  "short_name": "Paper",
+  "description": "A decentralized publishing protocol for permissionless monetization",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

@@ -6,7 +6,7 @@ A decentralized publishing platform built for **ETHMumbai 2026** in conjunction 
 
 ---
 
-## Tech Stack
+### Tech Stack
 
 | Layer | Tech |
 |-------|------|
@@ -17,7 +17,7 @@ A decentralized publishing platform built for **ETHMumbai 2026** in conjunction 
 
 ---
 
-## What is this
+### What is this
 
 A blockchain-based publishing platform where creators can publish articles as NFTs. Articles can be free or paid, with the platform supporting micro-payments via x402 protocol. Readers can unlock paid content by paying ETH or USDC directly to authors.
 
@@ -31,7 +31,7 @@ A blockchain-based publishing platform where creators can publish articles as NF
 
 ---
 
-## Screenshots
+### Screenshots
 
 <p align="center">
   <img src="./screenshots/screenshot1.png" alt="Home Page" width="400"/>
@@ -40,7 +40,7 @@ A blockchain-based publishing platform where creators can publish articles as NF
 
 ---
 
-## Getting Started
+### Getting Started
 
 ```bash
 # Install dependencies
@@ -75,27 +75,22 @@ The contracts are deployed on **Base Sepolia** testnet.
 
 Visit `http://localhost:3000` to use the app.
 
----
 
-## Project Structure
+### Repository Layout
 
 ```
-packages/
-├── foundry/
-│   ├── contracts/      # Smart contracts (Paper.sol, AdCampaigns.sol, Social.sol)
-│   └── script/         # Deployment scripts
-└── nextjs/
-    └── app/            # Next.js frontend (App Router)
+├── packages/
+│   ├── foundry/      # Smart contracts (Solidity, Foundry)
+│   └── nextjs/       # Frontend (Next.js, React, TypeScript)
+├── AGENTS.md         # Coding agent & contributor guidance
+├── CLAUDE.md         # Reference to agent guidance
+├── screenshots/      # App screenshots
+├── logo.png          # Project logo
+├── README.md         # Project overview & instructions
+└── yarn.lock         # Dependency lockfile
 ```
 
----
 
-## License
-
-MIT
-
----
-
-## Credits
+### Credits
 
 Built on top of [Scaffold-ETH 2](https://github.com/scaffold-eth/scaffold-eth-2).

@@ -23,7 +23,7 @@ const lora = Lora({
 
 export const metadata: Metadata = {
   title: "Paper - Monetize Your Words",
-  description: "A Medium clone with built-in ad space monetization.",
+  description: "A decentralized publishing protocol for permissionless monetization",
   icons: [{ rel: "icon", url: "/logo.png" }],
 };
 
