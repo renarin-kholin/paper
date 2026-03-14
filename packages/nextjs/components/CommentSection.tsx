@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, MessageCircle, Send } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Loader2, MessageCircle, RefreshCw, Send } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useScaffoldEventHistory, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { fetchCommentFromIPFS, uploadCommentToIPFS } from "~~/lib/ipfs";
@@ -42,61 +42,56 @@ export function CommentSection({ articleId }: CommentSectionProps) {
     eventName: "CommentAdded",
     fromBlock: 0n,
     filters: { articleId },
-    watch: true,
+    watch: false,
   });
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadComments() {
-      if (!mounted) return;
-      if (!events || !Array.isArray(events)) {
-        setIsLoading(false);
-        return;
-      }
-
-      const typedEvents = events as unknown as CommentEvent[];
-      const loadedComments: CommentWithBody[] = [];
-
-      for (const event of typedEvents) {
-        const author = event.author;
-        const cid = event.cid;
-        const timestamp = Number(event.timestamp || 0n);
-        const txHash = event.transactionHash;
-
-        if (!author) continue;
-
-        let body = "[Comment content unavailable]";
-
-        if (cid) {
-          try {
-            const commentData = await fetchCommentFromIPFS(cid);
-            body = commentData.body || body;
-          } catch {
-            // Use fallback body
-          }
-        }
-
-        loadedComments.push({
-          author,
-          body,
-          timestamp: timestamp * 1000,
-          transactionHash: txHash || "",
-        });
-      }
-
-      if (mounted) {
-        setComments(loadedComments.reverse());
-        setIsLoading(false);
-      }
+  const loadComments = useCallback(async () => {
+    if (!events || !Array.isArray(events)) {
+      setIsLoading(false);
+      return;
     }
 
-    loadComments();
+    const typedEvents = events as unknown as CommentEvent[];
+    const loadedComments: CommentWithBody[] = [];
 
-    return () => {
-      mounted = false;
-    };
+    for (const event of typedEvents) {
+      const author = event.author;
+      const cid = event.cid;
+      const timestamp = Number(event.timestamp || 0n);
+      const txHash = event.transactionHash;
+
+      if (!author) continue;
+
+      let body = "[Comment unavailable]";
+      if (cid) {
+        try {
+          const data = await fetchCommentFromIPFS(cid);
+          body = data.body || body;
+        } catch {
+          // Keep fallback
+        }
+      }
+
+      loadedComments.push({
+        author,
+        body,
+        timestamp: timestamp * 1000,
+        transactionHash: txHash || "",
+      });
+    }
+
+    setComments(loadedComments.reverse());
+    setIsLoading(false);
   }, [events]);
+
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
+
+  const handleRefresh = () => {
+    setIsLoading(true);
+    loadComments();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,21 +106,18 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         createdAt: Date.now(),
       };
 
-      console.log("Uploading comment:", commentData);
-
       const cid = await uploadCommentToIPFS(commentData);
-      console.log("Uploaded to IPFS, cid:", cid);
 
       await writeContractAsync({
         functionName: "addComment",
         args: [articleId, cid] as any,
       });
-      console.log("Contract call successful");
 
       setNewComment("");
-    } catch (err: any) {
-      console.error("Failed to add comment:", err);
-      setError(err.message || "Failed to add comment");
+      handleRefresh();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to add comment";
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -137,7 +129,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   };
 
   const formatDate = (timestamp: number) => {
-    if (!timestamp || timestamp === 0) return "";
+    if (!timestamp) return "";
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -154,9 +146,20 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
   return (
     <div className="border-t border-stone-200 mt-16 pt-8">
-      <div className="flex items-center gap-2 mb-6">
-        <MessageCircle className="w-5 h-5" />
-        <h2 className="text-xl font-bold text-stone-900">Responses {comments.length > 0 && `(${comments.length})`}</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" />
+          <h2 className="text-xl font-bold text-stone-900">
+            Responses {comments.length > 0 && `(${comments.length})`}
+          </h2>
+        </div>
+        <button
+          onClick={handleRefresh}
+          className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+          title="Refresh comments"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
