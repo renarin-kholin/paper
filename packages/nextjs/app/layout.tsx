@@ -24,6 +24,7 @@ const lora = Lora({
 export const metadata: Metadata = {
   title: "Paper - Monetize Your Words",
   description: "A Medium clone with built-in ad space monetization.",
+  icons: [{ rel: "icon", url: "/logo.png" }],
 };
 
 export default function RootLayout({
@@ -33,6 +34,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${lora.variable}`} suppressHydrationWarning>
+      <head>
+        <meta name="apple-mobile-web-app-title" content="Paper." />
+      </head>
       <body className="font-sans bg-white text-stone-900 min-h-screen flex flex-col" suppressHydrationWarning>
         <ThemeProvider forcedTheme="light">
           <ScaffoldEthAppWithProviders>
