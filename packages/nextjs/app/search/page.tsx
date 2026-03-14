@@ -5,10 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Address } from "@scaffold-ui/components";
-import { BookmarkPlus, Search as SearchIcon, Star } from "lucide-react";
+import { Search as SearchIcon, Star } from "lucide-react";
+import { getAddress, isAddress } from "viem";
+import { useEnsAddress, useEnsName } from "wagmi";
+import { BookmarkButton } from "~~/components/BookmarkButton";
 import { LikeButton } from "~~/components/LikeButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { calculateReadTime, fetchFromIPFS } from "~~/lib/ipfs";
+import { calculateReadTime, fetchFromIPFS, resolveIPFSUrl } from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
 
@@ -25,9 +28,18 @@ const toPreviewText = (raw?: string) => {
   return noMarkdown.replace(/\s+/g, " ").trim();
 };
 
-function SearchResultCard({ id }: { id: bigint }) {
+function SearchResultCard({
+  id,
+  query,
+  onMatchChange,
+}: {
+  id: bigint;
+  query: string;
+  onMatchChange: (id: bigint, isMatch: boolean) => void;
+}) {
   const [preview, setPreview] = useState("");
   const [readTime, setReadTime] = useState<number | null>(null);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   const { data: meta } = useScaffoldReadContract({
     contractName: "Paper",
@@ -52,15 +64,26 @@ function SearchResultCard({ id }: { id: bigint }) {
         if (data.content) {
           setReadTime(calculateReadTime(data.content));
         }
+        setThumbnail(resolveIPFSUrl(data.image));
       })
       .catch(() => {
         if (!active) return;
         setPreview("");
+        setThumbnail(null);
       });
     return () => {
       active = false;
     };
   }, [cid]);
+
+  const [author, createdAt, title, price] = (meta || ["", 0n, "", 0n, ""]) as ArticleMetaTuple;
+  const isPaywalled = price > 0n;
+  const matchesQuery =
+    Boolean(meta && cid) && (!query || `${title} ${preview} ${author}`.toLowerCase().includes(query));
+
+  useEffect(() => {
+    onMatchChange(id, matchesQuery);
+  }, [id, matchesQuery, onMatchChange]);
 
   if (!meta || !cid) {
     return (
@@ -73,8 +96,7 @@ function SearchResultCard({ id }: { id: bigint }) {
     );
   }
 
-  const [author, createdAt, title, price] = meta as ArticleMetaTuple;
-  const isPaywalled = price > 0n;
+  if (!matchesQuery) return null;
 
   return (
     <article className="group flex gap-4 sm:gap-6 items-start page-fade-in">
@@ -104,15 +126,13 @@ function SearchResultCard({ id }: { id: bigint }) {
             <span>{readTime ?? 1} min read</span>
           </div>
           <div className="flex items-center gap-3 text-stone-400">
-            <button className="hover:text-stone-900 active:scale-95" type="button" aria-label="Bookmark post">
-              <BookmarkPlus className="w-5 h-5" />
-            </button>
+            <BookmarkButton articleId={id} />
           </div>
         </div>
       </div>
       <div className="w-[100px] h-[96px] sm:w-[152px] sm:h-[112px] shrink-0 bg-stone-100 rounded-sm overflow-hidden lift-on-hover">
         <Image
-          src={`https://picsum.photos/seed/${id.toString()}/300/200`}
+          src={thumbnail || `https://picsum.photos/seed/${id.toString()}/300/200`}
           alt={title}
           width={152}
           height={112}
@@ -126,6 +146,22 @@ function SearchResultCard({ id }: { id: bigint }) {
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = (searchParams.get("q") || "").toLowerCase().trim();
+  const isEnsQuery = query.endsWith(".eth");
+  const addressQuery = isAddress(query) ? getAddress(query) : undefined;
+
+  const { data: ensResolvedAddress } = useEnsAddress({
+    name: isEnsQuery ? query : undefined,
+    chainId: 1,
+    query: { enabled: isEnsQuery },
+  });
+
+  const discoveredAddress = addressQuery || ensResolvedAddress || undefined;
+
+  const { data: discoveredEnsName } = useEnsName({
+    address: discoveredAddress,
+    chainId: 1,
+    query: { enabled: Boolean(discoveredAddress) },
+  });
 
   const { data: articleCount } = useScaffoldReadContract({
     contractName: "Paper",
@@ -134,11 +170,20 @@ export default function SearchPage() {
 
   const count = articleCount ? Number(articleCount) : 0;
   const allPostIds = Array.from({ length: count }, (_, i) => BigInt(count - 1 - i));
+  const [matchMap, setMatchMap] = useState<Record<string, boolean>>({});
 
-  const filteredIds = useMemo(() => {
-    if (!query) return allPostIds;
-    return allPostIds;
-  }, [allPostIds, query]);
+  const handleMatchChange = (id: bigint, isMatch: boolean) => {
+    setMatchMap(prev => {
+      const key = id.toString();
+      if (prev[key] === isMatch) return prev;
+      return { ...prev, [key]: isMatch };
+    });
+  };
+
+  const filteredCount = useMemo(() => {
+    if (!query) return allPostIds.length;
+    return allPostIds.filter(id => matchMap[id.toString()]).length;
+  }, [allPostIds, matchMap, query]);
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 page-fade-in">
@@ -151,14 +196,27 @@ export default function SearchPage() {
           {searchParams.get("q") ? `"${searchParams.get("q")}"` : "Search"}
         </h1>
         <p className="text-stone-500 mt-1">
-          {filteredIds.length} {filteredIds.length === 1 ? "result" : "results"}
+          {filteredCount} {filteredCount === 1 ? "result" : "results"}
         </p>
       </div>
 
-      {filteredIds.length > 0 ? (
+      {discoveredAddress && (
+        <div className="mb-8 rounded-2xl border border-stone-200 bg-stone-50 p-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">User match</p>
+          <Link
+            href={`/profile/${discoveredEnsName || discoveredAddress}`}
+            className="inline-flex items-center gap-2 text-stone-900 hover:text-stone-600"
+          >
+            <span className="font-medium">{discoveredEnsName || "ENS/Address profile"}</span>
+            <Address address={discoveredAddress} onlyEnsOrAddress disableAddressLink size="base" />
+          </Link>
+        </div>
+      )}
+
+      {allPostIds.length > 0 && filteredCount > 0 ? (
         <div className="space-y-10">
-          {filteredIds.map(id => (
-            <SearchResultCard key={id.toString()} id={id} />
+          {allPostIds.map(id => (
+            <SearchResultCard key={id.toString()} id={id} query={query} onMatchChange={handleMatchChange} />
           ))}
         </div>
       ) : (

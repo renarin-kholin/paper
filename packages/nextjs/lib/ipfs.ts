@@ -7,7 +7,7 @@ export const MIN_ETH_PRICE = "100000000000000"; // 0.0001 ETH
 export const MIN_USDC_PRICE = "10000"; // 0.01 USDC (6 decimals) - not yet supported
 
 // IPFS Gateway URL - can be configured via env var for custom gateways
-export const IPFS_GATEWAY_URL = process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL || "https://ipfs.io/ipfs/";
+export const IPFS_GATEWAY_URL = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://ipfs.io/ipfs";
 
 export interface ArticleMetadata {
   name: string;
@@ -19,6 +19,10 @@ export interface ArticleMetadata {
   price: string; // Price in wei (or USDC units)
   priceToken: string; // ETH_ADDRESS or USDC_ADDRESS
   image?: string;
+  adSpace?: {
+    enabled: boolean;
+    dailyPriceUsd: number;
+  };
 }
 
 export interface UserProfile {
@@ -104,7 +108,13 @@ export async function fetchFromIPFS<CID extends string>(cid: CID): Promise<Artic
 }
 
 export function getIPFSGatewayUrl(cid: string): string {
-  return `${IPFS_GATEWAY_URL}${cid}`;
+  return `${IPFS_GATEWAY_URL}/${cid}`;
+}
+
+export function resolveIPFSUrl(value?: string): string | null {
+  if (!value) return null;
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  return getIPFSGatewayUrl(value);
 }
 
 export async function uploadProfileToIPFS(data: UserProfile): Promise<string> {

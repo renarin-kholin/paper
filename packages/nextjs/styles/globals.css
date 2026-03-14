@@ -149,9 +149,9 @@ textarea:focus-visible {
   display: none;
 }
 
-.wallet-ui details[open]>.dropdown-content,
-.wallet-ui .dropdown:focus-within>.dropdown-content,
-.wallet-ui .dropdown>[tabindex="0"]:focus+.dropdown-content {
+.wallet-ui details[open] > .dropdown-content,
+.wallet-ui .dropdown:focus-within > .dropdown-content,
+.wallet-ui .dropdown > [tabindex="0"]:focus + .dropdown-content {
   display: block;
 }
 
@@ -164,7 +164,7 @@ textarea:focus-visible {
   margin: 0.15rem 0;
 }
 
-.wallet-ui .menu li>* {
+.wallet-ui .menu li > * {
   width: 100%;
   justify-content: flex-start;
   border-radius: 0.6rem;
@@ -198,7 +198,7 @@ textarea:focus-visible {
   padding: 1rem;
 }
 
-.wallet-ui .modal-toggle:checked+.modal {
+.wallet-ui .modal-toggle:checked + .modal {
   display: flex;
 }
 

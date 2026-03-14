@@ -5,16 +5,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Address } from "@scaffold-ui/components";
-import { BookmarkPlus, Globe, Loader2, Star, Twitter, User, Users } from "lucide-react";
+import { Globe, Loader2, Star, Twitter, User, Users } from "lucide-react";
 import { getAddress, isAddress } from "viem";
 import { useAccount } from "wagmi";
-import { useEnsAddress } from "wagmi";
+import { useEnsAddress, useEnsName } from "wagmi";
+import { BookmarkButton } from "~~/components/BookmarkButton";
 import { FollowButton } from "~~/components/FollowButton";
 import { LikeButton } from "~~/components/LikeButton";
 import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowerCount, useFollowingCount } from "~~/hooks/scaffold-eth/useFollowingList";
-import { UserProfile, calculateReadTime, fetchFromIPFS, fetchProfileFromIPFS, getIPFSGatewayUrl } from "~~/lib/ipfs";
+import {
+  UserProfile,
+  calculateReadTime,
+  fetchFromIPFS,
+  fetchProfileFromIPFS,
+  getIPFSGatewayUrl,
+  resolveIPFSUrl,
+} from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
 
@@ -34,6 +42,7 @@ const toPreviewText = (raw?: string) => {
 function AuthorPostCard({ id }: { id: bigint }) {
   const [preview, setPreview] = useState("");
   const [readTime, setReadTime] = useState<number | null>(null);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   const { data: meta } = useScaffoldReadContract({
     contractName: "Paper",
@@ -58,10 +67,12 @@ function AuthorPostCard({ id }: { id: bigint }) {
         if (data.content) {
           setReadTime(calculateReadTime(data.content));
         }
+        setThumbnail(resolveIPFSUrl(data.image));
       })
       .catch(() => {
         if (!active) return;
         setPreview("");
+        setThumbnail(null);
       });
     return () => {
       active = false;
@@ -100,15 +111,13 @@ function AuthorPostCard({ id }: { id: bigint }) {
             <span>{readTime ?? 1} min read</span>
           </div>
           <div className="flex items-center gap-3 text-stone-400">
-            <button className="hover:text-stone-900 active:scale-95" type="button" aria-label="Bookmark post">
-              <BookmarkPlus className="w-5 h-5" />
-            </button>
+            <BookmarkButton articleId={id} />
           </div>
         </div>
       </div>
       <div className="w-[100px] h-[96px] sm:w-[152px] sm:h-[112px] shrink-0 bg-stone-100 rounded-sm overflow-hidden lift-on-hover">
         <Image
-          src={`https://picsum.photos/seed/${id.toString()}/300/200`}
+          src={thumbnail || `https://picsum.photos/seed/${id.toString()}/300/200`}
           alt={title}
           width={152}
           height={112}
@@ -165,6 +174,12 @@ export default function PublicProfilePage() {
   }, [ensResolvedAddress, isAddressParam, isEnsParam, routeParam]);
 
   const { address: connectedAddress } = useAccount();
+
+  const { data: resolvedEnsName } = useEnsName({
+    address: resolvedAddress,
+    chainId: 1,
+    query: { enabled: Boolean(resolvedAddress) },
+  });
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -266,7 +281,9 @@ export default function PublicProfilePage() {
   }
 
   const displayName =
-    profile?.name || (isEnsParam ? routeParam : `${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)}`);
+    profile?.name ||
+    resolvedEnsName ||
+    (isEnsParam ? routeParam : `${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)}`);
   const displayBio = profile?.bio || "This author hasn't added a bio yet.";
 
   return (

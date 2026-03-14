@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { CommentSection } from "../../../components/CommentSection";
 import { Address } from "@scaffold-ui/components";
-import { Lock } from "lucide-react";
+import { Lock, Megaphone } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { useAccount } from "wagmi";
-import { CommentSection } from "~~/components/CommentSection";
+import { parseAbi } from "viem";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { BookmarkButton } from "~~/components/BookmarkButton";
 import { LikeButton } from "~~/components/LikeButton";
 import { TipButton } from "~~/components/TipButton";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { type ArticleMetadata, ETH_ADDRESS, calculateReadTime, fetchFromIPFS } from "~~/lib/ipfs";
+import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { type ArticleMetadata, ETH_ADDRESS, calculateReadTime, fetchFromIPFS, resolveIPFSUrl } from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
 
@@ -19,9 +22,11 @@ export default function PostPage() {
   const params = useParams();
   const tokenId = BigInt(params.id as string);
   const { address } = useAccount();
+  const publicClient = usePublicClient();
 
   const [content, setContent] = useState<ArticleMetadata | null>(null);
   const [contentError, setContentError] = useState<string | null>(null);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   const { data: meta, isLoading: metaLoading } = useScaffoldReadContract({
     contractName: "Paper",
@@ -43,6 +48,25 @@ export default function PostPage() {
   });
 
   const { writeContractAsync, isPending: isUnlocking } = useScaffoldWriteContract({ contractName: "Paper" });
+  const { writeContractAsync: writeErc20Async, isPending: isApproving } = useWriteContract();
+  const { data: paperContract } = useDeployedContractInfo({ contractName: "Paper" });
+
+  const { data: usdcToken } = useScaffoldReadContract({
+    contractName: "Paper",
+    functionName: "usdcToken",
+  });
+
+  const [author, createdAt, title, price, priceToken] = useMemo(() => {
+    return (meta || ["", 0n, "", 0n, ETH_ADDRESS]) as ArticleMetaTuple;
+  }, [meta]);
+
+  const isAuthor = Boolean(address && author && address.toLowerCase() === author.toLowerCase());
+  const isPaid = Boolean(hasPaid);
+  const showPaywall = price > 0n && !isAuthor && !isPaid;
+  const canPayWithEth = priceToken.toLowerCase() === ETH_ADDRESS.toLowerCase();
+  const canPayWithUsdc = Boolean(
+    usdcToken && typeof usdcToken === "string" && priceToken.toLowerCase() === usdcToken.toLowerCase(),
+  );
 
   useEffect(() => {
     if (!cid) return;
@@ -50,42 +74,82 @@ export default function PostPage() {
     let active = true;
     setContentError(null);
 
-    fetchFromIPFS(cid)
-      .then(result => {
-        if (active) setContent(result);
-      })
-      .catch(error => {
-        if (!active) return;
-        setContentError(error instanceof Error ? error.message : "Unable to load content");
-      });
+    const loadContent = async () => {
+      if (showPaywall) {
+        try {
+          const response = await fetch(`/api/article/${tokenId.toString()}/content`);
+          const payload = await response.json();
+          if (!active) return;
+
+          setContent({
+            name: title,
+            description: title,
+            content: payload.preview || "This article is paywalled.",
+            preview: payload.preview || "",
+            author,
+            createdAt: Number(createdAt) * 1000,
+            price: price.toString(),
+            priceToken,
+          });
+          setThumbnail(null);
+          return;
+        } catch (error) {
+          if (!active) return;
+          setContentError(error instanceof Error ? error.message : "Unable to load preview");
+          return;
+        }
+      }
+
+      fetchFromIPFS(cid)
+        .then(result => {
+          if (active) {
+            setContent(result);
+            setThumbnail(resolveIPFSUrl(result.image));
+          }
+        })
+        .catch(error => {
+          if (!active) return;
+          setContentError(error instanceof Error ? error.message : "Unable to load content");
+          setThumbnail(null);
+        });
+    };
+
+    loadContent();
 
     return () => {
       active = false;
     };
-  }, [cid]);
-
-  const [author, createdAt, title, price, priceToken] = useMemo(() => {
-    return (meta || ["", 0n, "", 0n, ETH_ADDRESS]) as ArticleMetaTuple;
-  }, [meta]);
+  }, [author, cid, createdAt, price, priceToken, showPaywall, title, tokenId]);
 
   const readTime = useMemo(() => {
     return content?.content ? calculateReadTime(content.content) : 1;
   }, [content]);
 
-  const isAuthor = Boolean(address && author && address.toLowerCase() === author.toLowerCase());
-  const isPaid = Boolean(hasPaid);
-  const showPaywall = price > 0n && !isAuthor && !isPaid;
-  const canPayWithEth = priceToken.toLowerCase() === ETH_ADDRESS.toLowerCase();
-
   const handleUnlock = async () => {
-    if (!canPayWithEth) return;
-
     try {
-      await writeContractAsync({
-        functionName: "payArticle",
-        args: [tokenId],
-        value: price,
-      });
+      if (canPayWithEth) {
+        await writeContractAsync({
+          functionName: "payArticle",
+          args: [tokenId],
+          value: price,
+        });
+        return;
+      }
+
+      if (canPayWithUsdc && usdcToken && paperContract?.address && publicClient) {
+        const approveHash = await writeErc20Async({
+          address: usdcToken,
+          abi: parseAbi(["function approve(address spender, uint256 amount) returns (bool)"]),
+          functionName: "approve",
+          args: [paperContract.address, price],
+        });
+
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        await writeContractAsync({
+          functionName: "payArticle",
+          args: [tokenId],
+        });
+      }
     } catch (error) {
       console.error(error);
     }
@@ -100,10 +164,17 @@ export default function PostPage() {
   }
 
   const articleBody = content?.content || "";
+  const adSpace = content?.adSpace;
 
   return (
     <article className="max-w-3xl mx-auto py-8 sm:py-12 page-fade-in">
       <header className="mb-12">
+        {thumbnail && (
+          <div className="mb-8 overflow-hidden rounded-2xl border border-stone-200">
+            <Image src={thumbnail} alt={title} width={1200} height={630} className="h-auto w-full object-cover" />
+          </div>
+        )}
+
         <h1 className="text-4xl sm:text-5xl font-serif font-bold text-stone-900 mb-8 leading-tight">{title}</h1>
 
         <div className="flex items-center justify-between pb-8 border-b border-stone-100">
@@ -122,6 +193,7 @@ export default function PostPage() {
           </div>
           <div className="flex items-center gap-3">
             <LikeButton articleId={tokenId} showCount={true} />
+            <BookmarkButton articleId={tokenId} />
             <TipButton authorAddress={author} />
           </div>
         </div>
@@ -144,15 +216,17 @@ export default function PostPage() {
               </p>
               <button
                 onClick={handleUnlock}
-                disabled={isUnlocking || !canPayWithEth}
+                disabled={isUnlocking || isApproving || (!canPayWithEth && !canPayWithUsdc)}
                 className="bg-stone-900 text-white px-8 py-3 rounded-full font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 text-lg active:scale-95"
                 type="button"
               >
-                {isUnlocking
+                {isUnlocking || isApproving
                   ? "Processing..."
                   : canPayWithEth
                     ? `Unlock for ${price.toString()} wei`
-                    : "Unsupported token"}
+                    : canPayWithUsdc
+                      ? `Unlock with USDC (${price.toString()})`
+                      : "Unsupported token"}
               </button>
             </div>
           </>
@@ -160,6 +234,27 @@ export default function PostPage() {
           <ReactMarkdown>{articleBody || "Content could not be loaded."}</ReactMarkdown>
         )}
       </div>
+
+      {adSpace?.enabled && (
+        <section className="mb-12 rounded-2xl border border-stone-200 bg-stone-50 p-6">
+          <div className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+            <Megaphone className="h-4 w-4" />
+            Ad Space
+          </div>
+          <h3 className="mb-2 text-xl font-semibold text-stone-900">Sponsor this story</h3>
+          <p className="text-stone-600">
+            Reserve this placement for ${adSpace.dailyPriceUsd}/day and reach engaged readers.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/signup"
+              className="inline-flex items-center rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-stone-800"
+            >
+              Create Campaign
+            </Link>
+          </div>
+        </section>
+      )}
 
       <CommentSection articleId={tokenId} />
 

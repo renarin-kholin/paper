@@ -1,5 +1,28 @@
 import type { NextConfig } from "next";
 
+const gatewayUrls = [
+  process.env.NEXT_PUBLIC_IPFS_GATEWAY,
+  process.env.NEXT_PUBLIC_PINATA_GATEWAY,
+  process.env.NEXT_PUBLIC_WEB3_STORAGE_GATEWAY,
+  "https://ipfs.io/ipfs",
+  "https://gateway.pinata.cloud/ipfs",
+  "https://w3s.link/ipfs",
+].filter(Boolean) as string[];
+
+const gatewayHostnames = Array.from(
+  new Set(
+    gatewayUrls
+      .map(url => {
+        try {
+          return new URL(url).hostname;
+        } catch {
+          return null;
+        }
+      })
+      .filter((hostname): hostname is string => Boolean(hostname)),
+  ),
+);
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
@@ -9,6 +32,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      ...gatewayHostnames.map(hostname => ({
+        protocol: "https" as const,
+        hostname,
+      })),
     ],
   },
   typescript: {

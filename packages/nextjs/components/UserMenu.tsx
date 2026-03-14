@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ChevronDown, CircleDot, User, Wallet } from "lucide-react";
 import { hardhat } from "viem/chains";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
 import { FaucetButton } from "~~/components/scaffold-eth";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 
@@ -12,6 +12,16 @@ export const UserMenu = () => {
   const { isConnected, chain, address } = useAccount();
   const { disconnect } = useDisconnect();
   const menuRef = useRef<HTMLDetailsElement>(null);
+  const { data: ensName } = useEnsName({
+    address,
+    chainId: 1,
+    query: { enabled: Boolean(address) },
+  });
+  const { data: ensAvatar } = useEnsAvatar({
+    name: ensName || undefined,
+    chainId: 1,
+    query: { enabled: Boolean(ensName) },
+  });
 
   useOutsideClick(menuRef, () => {
     menuRef.current?.removeAttribute("open");
@@ -20,7 +30,12 @@ export const UserMenu = () => {
   return (
     <details ref={menuRef} className="relative group">
       <summary className="w-9 h-9 rounded-full bg-stone-200 flex items-center justify-center overflow-hidden hover:bg-stone-300 active:scale-[0.98] list-none cursor-pointer border border-stone-300/60">
-        <User className="w-5 h-5 text-stone-500" />
+        {ensAvatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={ensAvatar} alt="Profile avatar" className="h-full w-full object-cover" />
+        ) : (
+          <User className="w-5 h-5 text-stone-500" />
+        )}
         <ChevronDown className="absolute -bottom-1.5 -right-1.5 h-4 w-4 rounded-full bg-white border border-stone-300 p-[2px] text-stone-500" />
       </summary>
 
@@ -43,7 +58,7 @@ export const UserMenu = () => {
           </div>
           {isConnected && (
             <div className="mb-2 rounded-md bg-white/80 px-2 py-1 text-xs text-stone-500 border border-stone-200">
-              {address?.slice(0, 6)}...{address?.slice(-4)}
+              {ensName || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
             </div>
           )}
 

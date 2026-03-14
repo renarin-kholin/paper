@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { notification } from "~~/utils/scaffold-eth/notification";
 
 interface LikeButtonProps {
   articleId: bigint;
@@ -18,7 +19,7 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
   const [isAnimating, setIsAnimating] = useState(false);
   const [lastAction, setLastAction] = useState<"like" | "unlike" | null>(null);
 
-  const { data: likeCount } = useScaffoldReadContract({
+  const { data: likeCount, refetch: refetchLikeCount } = useScaffoldReadContract({
     contractName: "Social",
     functionName: "likeCount" as any,
     args: [articleId] as any,
@@ -27,7 +28,7 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
   const { data: hasLiked, refetch: refetchHasLiked } = useScaffoldReadContract({
     contractName: "Social",
     functionName: "hasLiked" as any,
-    args: connectedAddress && articleId ? ([articleId, connectedAddress] as any) : undefined,
+    args: [articleId, connectedAddress] as any,
     query: { enabled: Boolean(connectedAddress && articleId) },
   });
 
@@ -37,10 +38,8 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
   const isLiked = optimisticLiked !== undefined ? optimisticLiked : Boolean(hasLiked);
 
   useEffect(() => {
-    if (lastAction) {
-      refetchHasLiked();
-    }
-  }, [lastAction, refetchHasLiked]);
+    setLastAction(null);
+  }, [hasLiked, likeCount]);
 
   const handleClick = async () => {
     if (!isConnected) {
@@ -49,37 +48,45 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
     }
 
     try {
+      const latest = await refetchHasLiked();
+      const latestLiked = Boolean(latest.data);
+
       setIsAnimating(true);
-      if (isLiked) {
+      if (latestLiked) {
         setLastAction("unlike");
         await writeContractAsync({
           functionName: "unlikeArticle" as any,
           args: [articleId] as any,
         });
-        setLastAction(null);
       } else {
         setLastAction("like");
         await writeContractAsync({
           functionName: "likeArticle" as any,
           args: [articleId] as any,
         });
-        setLastAction(null);
       }
     } catch (err: any) {
       console.error("Like action failed:", err);
-      setLastAction(null);
-      if (err?.message?.includes("already liked")) {
+      const reason = String(err?.shortMessage || err?.message || "").toLowerCase();
+
+      if (reason.includes("already liked")) {
         setLastAction("like");
-      } else if (err?.message?.includes("not liked")) {
+        notification.info("Already liked. Tap again to unlike.");
+      } else if (reason.includes("not liked")) {
         setLastAction("unlike");
+        notification.info("Already unliked. Tap again to like.");
+      } else {
+        setLastAction(null);
+        notification.error("Could not update like right now. Please try again.");
       }
     } finally {
+      await Promise.all([refetchHasLiked(), refetchLikeCount()]);
       setTimeout(() => setIsAnimating(false), 300);
     }
   };
 
   const count = likeCount ? Number(likeCount) : 0;
-  const displayCount = lastAction === "like" ? count + 1 : lastAction === "unlike" ? count - 1 : count;
+  const displayCount = Math.max(0, lastAction === "like" ? count + 1 : lastAction === "unlike" ? count - 1 : count);
 
   return (
     <button
@@ -93,7 +100,9 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
       `}
       aria-label={isLiked ? "Unlike" : "Like"}
     >
-      <Heart className={`w-5 h-5 transition-all ${isLiked ? "fill-current" : ""} ${isAnimating ? "scale-125" : ""}`} />
+      <Heart
+        className={`w-5 h-5 transition-all ${isLiked ? "fill-red-500 text-red-500" : ""} ${isAnimating ? "scale-125" : ""}`}
+      />
       {showCount && displayCount > 0 && <span className="text-sm font-medium">{displayCount}</span>}
     </button>
   );

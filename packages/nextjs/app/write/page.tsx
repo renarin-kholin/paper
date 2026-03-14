@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings } from "lucide-react";
+import { Camera, Loader2, Settings } from "lucide-react";
 import { parseEther } from "viem";
 import { useAccount } from "wagmi";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { SimpleEditor } from "~~/components/tiptap-templates/simple/simple-editor";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { ETH_ADDRESS, uploadToIPFS } from "~~/lib/ipfs";
+import { ETH_ADDRESS, getIPFSGatewayUrl, uploadImageToIPFS, uploadToIPFS } from "~~/lib/ipfs";
 
 export default function WritePage() {
   const router = useRouter();
@@ -20,6 +20,8 @@ export default function WritePage() {
   const [paywallEnabled, setPaywallEnabled] = useState(false);
   const [accessPrice, setAccessPrice] = useState("5");
   const [showSettings, setShowSettings] = useState(false);
+  const [thumbnailCid, setThumbnailCid] = useState<string | null>(null);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
 
   const parsedAccessPrice = Number(accessPrice);
   const parsedAdPrice = Number(adPrice);
@@ -49,6 +51,13 @@ export default function WritePage() {
         createdAt: Date.now(),
         price: priceWei.toString(),
         priceToken: ETH_ADDRESS,
+        image: thumbnailCid || undefined,
+        adSpace: adEnabled
+          ? {
+              enabled: true,
+              dailyPriceUsd: parsedAdPrice,
+            }
+          : undefined,
       });
 
       await writeContractAsync({
@@ -185,6 +194,46 @@ export default function WritePage() {
       )}
 
       <div className="space-y-6 page-fade-in">
+        <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-stone-900">Article Thumbnail</h3>
+              <p className="text-xs text-stone-500">Used in feeds, search, and profile cards.</p>
+            </div>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async event => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  setIsUploadingThumbnail(true);
+                  try {
+                    const uploadedCid = await uploadImageToIPFS(file);
+                    setThumbnailCid(uploadedCid);
+                  } catch (error) {
+                    console.error("Failed to upload thumbnail", error);
+                  } finally {
+                    setIsUploadingThumbnail(false);
+                  }
+                }}
+              />
+              <span className="inline-flex items-center gap-2 rounded-full border border-stone-300 px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">
+                {isUploadingThumbnail ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                {thumbnailCid ? "Change" : "Upload"}
+              </span>
+            </label>
+          </div>
+
+          {thumbnailCid && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={getIPFSGatewayUrl(thumbnailCid)} alt="Thumbnail preview" className="h-44 w-full object-cover" />
+            </div>
+          )}
+        </div>
+
         <input
           type="text"
           placeholder="Title"

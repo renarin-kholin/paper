@@ -1,20 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, MessageCircle, RefreshCw, Send } from "lucide-react";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
+import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { fetchCommentFromIPFS, uploadCommentToIPFS } from "~~/lib/ipfs";
 
-interface StoredComment {
+interface OnchainComment {
   cid: string;
   author: string;
-  timestamp: number;
+  createdAt: number;
 }
 
 interface CommentWithBody {
   author: string;
   body: string;
-  timestamp: number;
+  createdAt: number;
   key: string;
 }
 
@@ -24,76 +25,111 @@ interface CommentSectionProps {
 
 export function CommentSection({ articleId }: CommentSectionProps) {
   const { address: connectedAddress, isConnected } = useAccount();
+  const publicClient = usePublicClient();
 
   const [comments, setComments] = useState<CommentWithBody[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingComments, setIsLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
-  const getStorageKey = useCallback(() => `paper:comments:${articleId.toString()}`, [articleId]);
+  const { data: socialContract } = useDeployedContractInfo({ contractName: "Social" });
+  const { writeContractAsync } = useScaffoldWriteContract({ contractName: "Social" });
 
-  const readStoredComments = useCallback((): StoredComment[] => {
-    if (typeof window === "undefined") return [];
+  const { data: commentCountData, refetch: refetchCommentCount } = useScaffoldReadContract({
+    contractName: "Social",
+    functionName: "getCommentCount",
+    args: [articleId],
+  });
 
-    try {
-      const raw = window.localStorage.getItem(getStorageKey());
-      if (!raw) return [];
+  const loadComments = useCallback(
+    async (countOverride?: number) => {
+      const requestId = ++requestIdRef.current;
 
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) return [];
+      if (!publicClient || !socialContract?.address || !socialContract.abi) {
+        if (requestId === requestIdRef.current) {
+          setComments([]);
+          setIsLoadingComments(false);
+        }
+        return;
+      }
 
-      return parsed.filter(comment => {
-        if (typeof comment !== "object" || comment === null) return false;
-        const candidate = comment as Partial<StoredComment>;
-        return (
-          typeof candidate.cid === "string" &&
-          typeof candidate.author === "string" &&
-          typeof candidate.timestamp === "number"
-        );
-      }) as StoredComment[];
-    } catch {
-      return [];
-    }
-  }, [getStorageKey]);
+      setIsLoadingComments(true);
+      setError(null);
 
-  const loadComments = useCallback(async () => {
-    const storedComments = readStoredComments();
-    const loadedComments = await Promise.all(
-      storedComments.map(async comment => {
-        const { author, cid, timestamp } = comment;
-        if (!author || !cid) return null;
-
-        let body = "[Comment unavailable]";
-        try {
-          const data = await fetchCommentFromIPFS(cid);
-          body = data.body || body;
-        } catch {
-          // Keep fallback body when IPFS fetch fails.
+      try {
+        const commentCount = countOverride ?? Number(commentCountData || 0n);
+        if (commentCount <= 0) {
+          if (requestId === requestIdRef.current) {
+            setComments([]);
+          }
+          return;
         }
 
-        return {
-          author,
-          body,
-          timestamp,
-          key: `${cid}:${timestamp}`,
-        } as CommentWithBody;
-      }),
-    );
+        const indexes = Array.from({ length: commentCount }, (_, i) => BigInt(commentCount - 1 - i));
+        const rawComments = await Promise.all(
+          indexes.map(async index => {
+            const result = (await publicClient.readContract({
+              address: socialContract.address,
+              abi: socialContract.abi,
+              functionName: "getComment",
+              args: [articleId, index],
+            })) as [string, string, bigint];
 
-    const validComments = loadedComments.filter(Boolean) as CommentWithBody[];
-    validComments.sort((a, b) => b.timestamp - a.timestamp);
-    setComments(validComments);
-    setIsLoading(false);
-  }, [readStoredComments]);
+            return {
+              author: result[0],
+              cid: result[1],
+              createdAt: Number(result[2]) * 1000,
+            } as OnchainComment;
+          }),
+        );
+
+        const loadedComments = await Promise.all(
+          rawComments.map(async comment => {
+            let body = "[Comment unavailable]";
+            try {
+              const data = await fetchCommentFromIPFS(comment.cid);
+              body = data.body || body;
+            } catch {
+              // Keep fallback body when IPFS fetch fails.
+            }
+
+            return {
+              author: comment.author,
+              body,
+              createdAt: comment.createdAt,
+              key: `${comment.cid}:${comment.createdAt}`,
+            } as CommentWithBody;
+          }),
+        );
+
+        if (requestId === requestIdRef.current) {
+          setComments(loadedComments);
+        }
+      } catch (err: unknown) {
+        if (requestId === requestIdRef.current) {
+          const message = err instanceof Error ? err.message : "Failed to load comments";
+          setError(message);
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setIsLoadingComments(false);
+        }
+      }
+    },
+    [articleId, commentCountData, publicClient, socialContract?.abi, socialContract?.address],
+  );
 
   useEffect(() => {
     loadComments();
   }, [loadComments]);
 
   const handleRefresh = async () => {
-    setIsLoading(true);
-    await loadComments();
+    setIsLoadingComments(true);
+    const refreshed = await refetchCommentCount();
+    const nextCount = Number(refreshed.data || 0n);
+    await loadComments(nextCount);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,23 +147,16 @@ export function CommentSection({ articleId }: CommentSectionProps) {
       };
 
       const cid = await uploadCommentToIPFS(commentData);
-      const existing = readStoredComments();
-      const nextComments: StoredComment[] = [
-        ...existing,
-        {
-          cid,
-          author: connectedAddress,
-          timestamp: Date.now(),
-        },
-      ];
-
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(getStorageKey(), JSON.stringify(nextComments));
-      }
+      await writeContractAsync({
+        functionName: "addComment",
+        args: [articleId, cid],
+      });
 
       setNewComment("");
-      setIsLoading(true);
-      await loadComments();
+      setIsLoadingComments(true);
+      const refreshed = await refetchCommentCount();
+      const nextCount = Number(refreshed.data || 0n);
+      await loadComments(nextCount);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to add comment";
       setError(msg);
@@ -204,7 +233,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         </div>
       )}
 
-      {isLoading ? (
+      {isLoadingComments ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-stone-400" />
         </div>
@@ -217,7 +246,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
                   {comment.author ? comment.author.slice(2, 4).toUpperCase() : "??"}
                 </div>
                 <span className="font-medium text-stone-900 text-sm">{formatAddress(comment.author)}</span>
-                <span className="text-stone-400 text-sm">{formatDate(comment.timestamp)}</span>
+                <span className="text-stone-400 text-sm">{formatDate(comment.createdAt)}</span>
               </div>
               <p className="text-stone-700 font-serif leading-relaxed">{comment.body}</p>
             </div>

@@ -55,6 +55,7 @@ import { useIsBreakpoint } from "~~/hooks/use-is-breakpoint";
 import { useWindowSize } from "~~/hooks/use-window-size";
 // --- Lib ---
 import { MAX_FILE_SIZE, handleImageUpload } from "~~/lib/tiptap-utils";
+import { notification } from "~~/utils/scaffold-eth/notification";
 
 const MainToolbarContent = ({
   onHighlighterClick,
@@ -190,7 +191,14 @@ export function SimpleEditor({
         maxSize: MAX_FILE_SIZE,
         limit: 3,
         upload: handleImageUpload,
-        onError: error => console.error("Upload failed:", error),
+        onError: error => {
+          const message = error?.message || "Upload failed";
+          if (message.toLowerCase().includes("file size exceeds maximum")) {
+            notification.warning(`Image is too large. Max file size is ${MAX_FILE_SIZE / (1024 * 1024)}MB.`);
+            return;
+          }
+          notification.error(message);
+        },
       }),
       Placeholder.configure({
         placeholder: placeholder,

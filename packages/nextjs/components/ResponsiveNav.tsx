@@ -3,7 +3,8 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, BookOpen, Home, User } from "lucide-react";
+import { BarChart2, BookMarked, BookOpen, Home, User } from "lucide-react";
+import { useAccount, useEnsAvatar, useEnsName } from "wagmi";
 
 type NavItem = {
   href: string;
@@ -14,6 +15,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/dashboard", label: "Stats", icon: BarChart2 },
+  { href: "/bookmarks", label: "Bookmarks", icon: BookMarked },
   { href: "/write", label: "Stories", icon: BookOpen },
   { href: "/profile", label: "Profile", icon: User },
 ];
@@ -25,6 +27,17 @@ const isActivePath = (pathname: string, href: string) => {
 
 export const ResponsiveNav = () => {
   const pathname = usePathname();
+  const { address } = useAccount();
+  const { data: ensName } = useEnsName({
+    address,
+    chainId: 1,
+    query: { enabled: Boolean(address) },
+  });
+  const { data: ensAvatar } = useEnsAvatar({
+    name: ensName || undefined,
+    chainId: 1,
+    query: { enabled: Boolean(ensName) },
+  });
 
   return (
     <>
@@ -45,7 +58,12 @@ export const ResponsiveNav = () => {
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="w-6 h-6 stroke-[1.5]" />
+                {item.href === "/profile" && ensAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ensAvatar} alt="Profile avatar" className="h-6 w-6 rounded-full object-cover" />
+                ) : (
+                  <Icon className="w-6 h-6 stroke-[1.5]" />
+                )}
                 {item.label}
               </Link>
             );
@@ -54,7 +72,7 @@ export const ResponsiveNav = () => {
       </aside>
 
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-stone-200 bg-white/95 backdrop-blur">
-        <div className="grid grid-cols-4 px-2 py-1.5">
+        <div className="grid grid-cols-5 px-2 py-1.5">
           {NAV_ITEMS.map(item => {
             const Icon = item.icon;
             const active = isActivePath(pathname, item.href);
@@ -68,7 +86,12 @@ export const ResponsiveNav = () => {
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="w-5 h-5" />
+                {item.href === "/profile" && ensAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ensAvatar} alt="Profile avatar" className="h-5 w-5 rounded-full object-cover" />
+                ) : (
+                  <Icon className="w-5 h-5" />
+                )}
                 <span className="text-[11px] font-medium">{item.label}</span>
               </Link>
             );

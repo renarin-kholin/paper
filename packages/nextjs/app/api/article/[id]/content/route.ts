@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { readContract } from "viem/actions";
 import { baseSepolia } from "viem/chains";
-import { ETH_ADDRESS, fetchFromIPFS } from "~~/lib/ipfs";
+import { ETH_ADDRESS } from "~~/lib/ipfs";
 
 const PAPERS_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PAPER_CONTRACT_ADDRESS as string;
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:8545";
@@ -64,6 +64,16 @@ async function getArticlePrice(articleId: string) {
   }
 }
 
+async function fetchArticleMetadata(cid: string) {
+  const gatewayUrl =
+    process.env.NEXT_PUBLIC_PINATA_GATEWAY || process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://ipfs.io/ipfs";
+  const response = await fetch(`${gatewayUrl}/${cid}`);
+  if (!response.ok) {
+    throw new Error(`IPFS fetch failed: ${response.statusText}`);
+  }
+  return response.json() as Promise<{ content?: string; preview?: string }>;
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const tokenId = id;
@@ -79,10 +89,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Check if article is free
   if (price === 0n) {
     try {
-      const metadata = await fetchFromIPFS(cid);
+      const metadata = await fetchArticleMetadata(cid);
       return NextResponse.json({
         content: metadata.content,
-        preview: metadata.preview || metadata.content.slice(0, 200),
+        preview: metadata.preview || metadata.content?.slice(0, 200) || "",
         price: "0",
         priceToken: ETH_ADDRESS,
         isPaid: true,
@@ -93,25 +103,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
   }
 
-  // Check for x402 payment authorization header (for AI agents)
-  const paymentAuth = request.headers.get("x-payment-authorization");
-
-  if (paymentAuth) {
-    // Payment was made - verify and return content
-    try {
-      const metadata = await fetchFromIPFS(cid);
-      return NextResponse.json({
-        content: metadata.content,
-        preview: metadata.preview || metadata.content.slice(0, 200),
-        price: price.toString(),
-        priceToken: priceToken === ETH_ADDRESS ? "ETH" : "USDC",
-        isPaid: true,
-        author,
-      });
-    } catch {
-      return NextResponse.json({ error: "Failed to fetch content" }, { status: 500 });
-    }
-  }
+  // NOTE: x402 authorization headers are intentionally ignored until signature verification is implemented.
+  const metadata = await fetchArticleMetadata(cid).catch(() => null);
+  const preview = metadata?.preview || metadata?.content?.slice(0, 200) || null;
 
   // Return 402 Payment Required with x402 headers
   const priceInWei = price.toString();
@@ -119,7 +113,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   return NextResponse.json(
     {
-      preview: null,
+      preview,
       price: priceInWei,
       priceToken: tokenSymbol,
       isPaid: false,
@@ -131,8 +125,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       headers: {
         "X-PAYMENT-NETWORK": "base-sepolia",
         "X-PAYMENT-TOKEN": tokenSymbol,
+        "X-PAYMENT-TOKEN-ADDRESS": priceToken,
         "X-PAYMENT-AMOUNT": priceInWei,
         "X-PAYMENT-TO": author,
+        "X-X402-VERSION": "0.1",
       },
     },
   );
