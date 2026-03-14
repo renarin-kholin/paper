@@ -10,6 +10,7 @@ import { getAddress, isAddress } from "viem";
 import { useEnsAddress, useEnsName } from "wagmi";
 import { BookmarkButton } from "~~/components/BookmarkButton";
 import { LikeButton } from "~~/components/LikeButton";
+import { SearchPageSkeleton } from "~~/components/LoadingStates";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { calculateReadTime, fetchFromIPFS, resolveIPFSUrl } from "~~/lib/ipfs";
 
@@ -235,16 +236,7 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8">
-          <div className="mb-8">
-            <div className="h-8 w-48 bg-stone-100 rounded animate-pulse mb-2" />
-            <div className="h-10 w-64 bg-stone-100 rounded animate-pulse" />
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<SearchPageSkeleton />}>
       <SearchPageContent />
     </Suspense>
   );

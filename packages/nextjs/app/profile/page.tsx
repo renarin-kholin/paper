@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Camera, CheckCircle2, Globe, Loader2, Twitter, User, X } from "lucide-react";
 import { useAccount, useEnsName, useSignMessage } from "wagmi";
+import { CenteredSpinner, ProfileEditorSkeleton } from "~~/components/LoadingStates";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { generatePaperSubdomain, normalizeUsernameLabel, resolveUsername } from "~~/lib/ens-identity";
 import {
@@ -242,14 +243,7 @@ export default function ProfilePage() {
   });
 
   if (!isWalletReady || isContractLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-stone-400 mx-auto mb-4" />
-          <p className="text-stone-500">{!isWalletReady ? "Connecting wallet..." : "Loading profile..."}</p>
-        </div>
-      </div>
-    );
+    return <CenteredSpinner label={!isWalletReady ? "Connecting wallet..." : "Loading profile..."} />;
   }
 
   if (!isConnected) {
@@ -266,11 +260,7 @@ export default function ProfilePage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
-      </div>
-    );
+    return <ProfileEditorSkeleton />;
   }
 
   return (

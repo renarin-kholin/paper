@@ -5,13 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Address } from "@scaffold-ui/components";
-import { Globe, Loader2, Star, Twitter, User, Users } from "lucide-react";
+import { Globe, Star, Twitter, User, Users } from "lucide-react";
 import { getAddress, isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { useEnsAddress, useEnsName } from "wagmi";
 import { BookmarkButton } from "~~/components/BookmarkButton";
 import { FollowButton } from "~~/components/FollowButton";
 import { LikeButton } from "~~/components/LikeButton";
+import { CenteredSpinner, ProfilePageSkeleton } from "~~/components/LoadingStates";
 import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowerCount, useFollowingCount } from "~~/hooks/scaffold-eth/useFollowingList";
@@ -258,11 +259,7 @@ export default function PublicProfilePage() {
   }
 
   if (isEnsLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
-      </div>
-    );
+    return <CenteredSpinner label="Resolving ENS profile..." />;
   }
 
   if (!resolvedAddress) {
@@ -274,11 +271,7 @@ export default function PublicProfilePage() {
   }
 
   if (isContractLoading || isLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
-      </div>
-    );
+    return <ProfilePageSkeleton />;
   }
 
   const username = resolveUsername({

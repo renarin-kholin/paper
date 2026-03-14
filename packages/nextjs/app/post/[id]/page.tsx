@@ -12,6 +12,7 @@ import { parseAbi } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { BookmarkButton } from "~~/components/BookmarkButton";
 import { LikeButton } from "~~/components/LikeButton";
+import { PostPageSkeleton } from "~~/components/LoadingStates";
 import { TipButton } from "~~/components/TipButton";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { type ArticleMetadata, ETH_ADDRESS, calculateReadTime, fetchFromIPFS, resolveIPFSUrl } from "~~/lib/ipfs";
@@ -156,7 +157,7 @@ export default function PostPage() {
   };
 
   if (metaLoading || cidLoading) {
-    return <div className="max-w-3xl mx-auto py-12 text-center text-stone-500">Loading post...</div>;
+    return <PostPageSkeleton />;
   }
 
   if (!meta || !cid) {
@@ -220,13 +221,18 @@ export default function PostPage() {
                 className="bg-stone-900 text-white px-8 py-3 rounded-full font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 text-lg active:scale-95"
                 type="button"
               >
-                {isUnlocking || isApproving
-                  ? "Processing..."
-                  : canPayWithEth
-                    ? `Unlock for ${price.toString()} wei`
-                    : canPayWithUsdc
-                      ? `Unlock with USDC (${price.toString()})`
-                      : "Unsupported token"}
+                {isUnlocking || isApproving ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-safe:animate-spin" />
+                    Processing...
+                  </span>
+                ) : canPayWithEth ? (
+                  `Unlock for ${price.toString()} wei`
+                ) : canPayWithUsdc ? (
+                  `Unlock with USDC (${price.toString()})`
+                ) : (
+                  "Unsupported token"
+                )}
               </button>
             </div>
           </>

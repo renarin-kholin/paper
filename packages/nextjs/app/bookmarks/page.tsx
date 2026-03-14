@@ -8,6 +8,7 @@ import { BookmarkX, Star } from "lucide-react";
 import { useAccount } from "wagmi";
 import { BookmarkButton } from "~~/components/BookmarkButton";
 import { LikeButton } from "~~/components/LikeButton";
+import { FeedCardSkeleton } from "~~/components/LoadingStates";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { calculateReadTime, fetchFromIPFS, resolveIPFSUrl } from "~~/lib/ipfs";
 
@@ -139,7 +140,7 @@ export default function BookmarksPage() {
           Connect your wallet to view on-chain bookmarks.
         </div>
       ) : isLoading ? (
-        <div className="h-24 rounded-xl bg-stone-100 animate-pulse" />
+        <FeedCardSkeleton count={3} />
       ) : uniqueIds.length > 0 ? (
         <div className="space-y-10">
           {uniqueIds.map(id => (
