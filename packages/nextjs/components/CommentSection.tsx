@@ -4,21 +4,13 @@ import { useEffect, useState } from "react";
 import { Loader2, MessageCircle, Send } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useScaffoldEventHistory, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { Comment, fetchCommentFromIPFS, uploadCommentToIPFS } from "~~/lib/ipfs";
+import { fetchCommentFromIPFS, uploadCommentToIPFS } from "~~/lib/ipfs";
 
-interface CommentEvent {
-  articleId: bigint;
+interface CommentWithBody {
   author: string;
-  cid: string;
-  timestamp: bigint;
-  blockNumber: bigint;
-  blockHash: string;
+  body: string;
+  timestamp: number;
   transactionHash: string;
-}
-
-interface CommentWithContent extends CommentEvent {
-  content?: Comment;
-  isLoading: boolean;
 }
 
 interface CommentSectionProps {
@@ -29,8 +21,8 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   const { address: connectedAddress, isConnected } = useAccount();
   const { writeContractAsync } = useScaffoldWriteContract({ contractName: "Social" });
 
-  const [comments, setComments] = useState<CommentWithContent[]>([]);
-  const [isLoadingComments, setIsLoadingComments] = useState(true);
+  const [comments, setComments] = useState<CommentWithBody[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,33 +36,41 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
   useEffect(() => {
     async function loadComments() {
-      if (!events) {
-        setIsLoadingComments(false);
+      if (!events || !Array.isArray(events)) {
+        setIsLoading(false);
         return;
       }
 
-      const typedEvents = events as unknown as CommentEvent[];
-      const commentsWithContent: CommentWithContent[] = [];
+      const loadedComments: CommentWithBody[] = [];
 
-      for (const event of typedEvents) {
+      for (const event of events) {
+        const cid = (event as Record<string, unknown>).cid as string | undefined;
+        const author = (event as Record<string, unknown>).author as string | undefined;
+        const timestamp = Number(((event as Record<string, unknown>).timestamp as bigint) || 0n);
+        const txHash = (event as Record<string, unknown>).transactionHash as string | undefined;
+
+        if (!cid || !author) continue;
+
         try {
-          const content = await fetchCommentFromIPFS(event.cid);
-          commentsWithContent.push({
-            ...event,
-            content,
-            isLoading: false,
+          const commentData = await fetchCommentFromIPFS(cid);
+          loadedComments.push({
+            author,
+            body: commentData.body || "[Comment]",
+            timestamp: commentData.createdAt || timestamp * 1000,
+            transactionHash: txHash || "",
           });
         } catch {
-          commentsWithContent.push({
-            ...event,
-            content: { author: event.author, body: "[Failed to load comment]", createdAt: Number(event.timestamp) },
-            isLoading: false,
+          loadedComments.push({
+            author,
+            body: "[Failed to load comment]",
+            timestamp: timestamp * 1000,
+            transactionHash: txHash || "",
           });
         }
       }
 
-      setComments(commentsWithContent.reverse());
-      setIsLoadingComments(false);
+      setComments(loadedComments.reverse());
+      setIsLoading(false);
     }
 
     loadComments();
@@ -78,13 +78,11 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || !isConnected) return;
+    if (!newComment.trim() || !isConnected || !connectedAddress) return;
 
     setIsSubmitting(true);
     try {
-      if (!connectedAddress) return;
-
-      const commentData: Comment = {
+      const commentData = {
         author: connectedAddress,
         body: newComment.trim(),
         createdAt: Date.now(),
@@ -103,6 +101,26 @@ export function CommentSection({ articleId }: CommentSectionProps) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const formatAddress = (addr: string) => {
+    if (!addr) return "Unknown";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   return (
@@ -139,26 +157,25 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         </div>
       )}
 
-      {isLoadingComments ? (
+      {isLoading ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-stone-400" />
         </div>
       ) : comments.length > 0 ? (
         <div className="space-y-6">
           {comments.map(comment => (
-            <div key={comment.transactionHash} className="border-b border-stone-100 pb-6">
+            <div
+              key={comment.transactionHash || comment.timestamp}
+              className="border-b border-stone-100 pb-6 last:border-0"
+            >
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-xs font-medium text-stone-600">
-                  {comment.content?.author.slice(2, 4).toUpperCase()}
+                  {comment.author ? comment.author.slice(2, 4).toUpperCase() : "??"}
                 </div>
-                <span className="font-medium text-stone-900 text-sm">
-                  {comment.content?.author.slice(0, 6)}...{comment.content?.author.slice(-4)}
-                </span>
-                <span className="text-stone-400 text-sm">
-                  {comment.content?.createdAt ? new Date(comment.content.createdAt).toLocaleDateString() : ""}
-                </span>
+                <span className="font-medium text-stone-900 text-sm">{formatAddress(comment.author)}</span>
+                <span className="text-stone-400 text-sm">{formatDate(comment.timestamp)}</span>
               </div>
-              <p className="text-stone-700 font-serif leading-relaxed">{comment.content?.body}</p>
+              <p className="text-stone-700 font-serif leading-relaxed">{comment.body}</p>
             </div>
           ))}
         </div>
