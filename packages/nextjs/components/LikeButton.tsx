@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 import { useAccount } from "wagmi";
@@ -16,6 +16,7 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
   const router = useRouter();
   const { address: connectedAddress, isConnected } = useAccount();
   const [isAnimating, setIsAnimating] = useState(false);
+  const [lastAction, setLastAction] = useState<"like" | "unlike" | null>(null);
 
   const { data: likeCount } = useScaffoldReadContract({
     contractName: "Social",
@@ -23,7 +24,7 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
     args: [articleId] as any,
   });
 
-  const { data: hasLiked } = useScaffoldReadContract({
+  const { data: hasLiked, refetch: refetchHasLiked } = useScaffoldReadContract({
     contractName: "Social",
     functionName: "hasLiked" as any,
     args: connectedAddress && articleId ? ([articleId, connectedAddress] as any) : undefined,
@@ -31,6 +32,15 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
   });
 
   const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "Social" });
+
+  const optimisticLiked = lastAction === "like" ? true : lastAction === "unlike" ? false : undefined;
+  const isLiked = optimisticLiked !== undefined ? optimisticLiked : Boolean(hasLiked);
+
+  useEffect(() => {
+    if (lastAction) {
+      refetchHasLiked();
+    }
+  }, [lastAction, refetchHasLiked]);
 
   const handleClick = async () => {
     if (!isConnected) {
@@ -40,26 +50,36 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
 
     try {
       setIsAnimating(true);
-      if (hasLiked) {
+      if (isLiked) {
+        setLastAction("unlike");
         await writeContractAsync({
           functionName: "unlikeArticle" as any,
           args: [articleId] as any,
         });
+        setLastAction(null);
       } else {
+        setLastAction("like");
         await writeContractAsync({
           functionName: "likeArticle" as any,
           args: [articleId] as any,
         });
+        setLastAction(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Like action failed:", err);
+      setLastAction(null);
+      if (err?.message?.includes("already liked")) {
+        setLastAction("like");
+      } else if (err?.message?.includes("not liked")) {
+        setLastAction("unlike");
+      }
     } finally {
       setTimeout(() => setIsAnimating(false), 300);
     }
   };
 
   const count = likeCount ? Number(likeCount) : 0;
-  const isLiked = Boolean(hasLiked);
+  const displayCount = lastAction === "like" ? count + 1 : lastAction === "unlike" ? count - 1 : count;
 
   return (
     <button
@@ -74,7 +94,7 @@ export function LikeButton({ articleId, className = "", showCount = true }: Like
       aria-label={isLiked ? "Unlike" : "Like"}
     >
       <Heart className={`w-5 h-5 transition-all ${isLiked ? "fill-current" : ""} ${isAnimating ? "scale-125" : ""}`} />
-      {showCount && count > 0 && <span className="text-sm font-medium">{count}</span>}
+      {showCount && displayCount > 0 && <span className="text-sm font-medium">{displayCount}</span>}
     </button>
   );
 }
