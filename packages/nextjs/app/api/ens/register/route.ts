@@ -86,11 +86,18 @@ const ENS_PUBLIC_RESOLVER_ADDRESS = process.env.ENS_PUBLIC_RESOLVER_ADDRESS as `
 const ENS_SUBNAME_REGISTRAR_PRIVATE_KEY = process.env.ENS_SUBNAME_REGISTRAR_PRIVATE_KEY as `0x${string}` | undefined;
 const PAPER_ENS_PARENT = process.env.NEXT_PUBLIC_PAPER_ENS_PARENT || "paper.eth";
 const ENS_CHAIN_ID = Number(process.env.ENS_CHAIN_ID || "11155111");
-const ENS_RPC_URL =
-  process.env.ENS_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
+const ENS_RPC_URL = process.env.ENS_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
 const AUTH_WINDOW_MS = 5 * 60 * 1000;
+const MIN_REQUEST_INTERVAL_MS = 15 * 1000;
 
-const chain = ENS_CHAIN_ID === mainnet.id ? mainnet : sepolia;
+const recentRegistrations = new Map<string, number>();
+const recentRequests = new Map<string, number>();
+
+const getEnsChain = () => {
+  if (ENS_CHAIN_ID === mainnet.id) return mainnet;
+  if (ENS_CHAIN_ID === sepolia.id) return sepolia;
+  throw new Error(`Unsupported ENS_CHAIN_ID: ${ENS_CHAIN_ID}. Use ${mainnet.id} or ${sepolia.id}.`);
+};
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 
@@ -126,9 +133,23 @@ const getRegistrarPrivateKey = (): `0x${string}` => {
   return hex as `0x${string}`;
 };
 
+const getRequestIdentity = (request: NextRequest, address: string) => {
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return `${address.toLowerCase()}:${forwarded || "unknown"}`;
+};
+
+const cleanupMap = (cache: Map<string, number>, maxAgeMs: number, now: number) => {
+  for (const [key, timestamp] of cache.entries()) {
+    if (now - timestamp > maxAgeMs) {
+      cache.delete(key);
+    }
+  }
+};
+
 export async function POST(request: NextRequest) {
   try {
     ensureConfig();
+    const chain = getEnsChain();
 
     const body = await request.json();
     const address = body?.address as string | undefined;
@@ -149,8 +170,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing signature payload" }, { status: 400 });
     }
 
-    if (Math.abs(Date.now() - timestamp) > AUTH_WINDOW_MS) {
+    const now = Date.now();
+    if (Math.abs(now - timestamp) > AUTH_WINDOW_MS) {
       return NextResponse.json({ error: "Signature expired. Please try again." }, { status: 401 });
+    }
+
+    cleanupMap(recentRegistrations, AUTH_WINDOW_MS, now);
+    cleanupMap(recentRequests, AUTH_WINDOW_MS, now);
+
+    const requestIdentity = getRequestIdentity(request, address);
+    const lastRequestAt = recentRequests.get(requestIdentity);
+    if (lastRequestAt && now - lastRequestAt < MIN_REQUEST_INTERVAL_MS) {
+      return NextResponse.json({ error: "Too many requests. Please wait and try again." }, { status: 429 });
+    }
+    recentRequests.set(requestIdentity, now);
+
+    const replayKey = `${address.toLowerCase()}:${username.toLowerCase()}:${timestamp}`;
+    if (recentRegistrations.has(replayKey)) {
+      return NextResponse.json({ error: "Duplicate registration payload detected." }, { status: 409 });
     }
 
     const expectedMessage = [
@@ -173,6 +210,8 @@ export async function POST(request: NextRequest) {
     if (!isValidSignature) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
+
+    recentRegistrations.set(replayKey, now);
 
     const label = normalizeUsernameLabel(username);
     if (!label || label.length < 3) {
