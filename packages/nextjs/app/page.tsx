@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { BookmarkPlus, MoreHorizontal, Sparkles, Star } from "lucide-react";
+import { BookmarkPlus, MoreHorizontal, Star } from "lucide-react";
 import { useAccount } from "wagmi";
+import { LikeButton } from "~~/components/LikeButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { fetchFromIPFS } from "~~/lib/ipfs";
 
@@ -95,9 +96,9 @@ function PostCard({ id }: { id: bigint }) {
           </div>
         </Link>
         <div className="flex items-center justify-between mt-4">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
             {isPaywalled && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
-            <Sparkles className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+            <LikeButton articleId={id} />
             <span>{new Date(Number(createdAt) * 1000).toLocaleDateString()}</span>
             <span>·</span>
             <span>4 min read</span>

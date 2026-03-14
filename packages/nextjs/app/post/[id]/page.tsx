@@ -6,6 +6,8 @@ import { useParams } from "next/navigation";
 import { Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAccount } from "wagmi";
+import { LikeButton } from "~~/components/LikeButton";
+import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { type ArticleMetadata, ETH_ADDRESS, fetchFromIPFS } from "~~/lib/ipfs";
 
@@ -98,7 +100,7 @@ export default function PostPage() {
       <header className="mb-12">
         <h1 className="text-4xl sm:text-5xl font-serif font-bold text-stone-900 mb-8 leading-tight">{title}</h1>
 
-        <div className="flex items-center gap-4 pb-8 border-b border-stone-100">
+        <div className="flex items-center justify-between pb-8 border-b border-stone-100">
           <div>
             <Link
               href={`/profile/${author}`}
@@ -111,6 +113,10 @@ export default function PostPage() {
               <span>·</span>
               <span>4 min read</span>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <LikeButton articleId={tokenId} showCount={true} />
+            <TipButton articleId={tokenId} authorAddress={author} />
           </div>
         </div>
       </header>

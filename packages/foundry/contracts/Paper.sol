@@ -44,6 +44,12 @@ contract Paper is ERC721URIStorage {
     /// @notice Count of users being followed by each user
     mapping(address => uint256) public followingCount;
 
+    /// @notice Track who liked which article (tokenId => user => bool)
+    mapping(uint256 => mapping(address => bool)) public likedBy;
+
+    /// @notice Total likes for each article
+    mapping(uint256 => uint256) public likeCount;
+
     /// @notice USDC interface for transfers
     IERC20 public usdc;
 
@@ -83,6 +89,23 @@ contract Paper is ERC721URIStorage {
     /// @param follower The address that unfollowed
     /// @param followed The address being unfollowed
     event Unfollowed(address indexed follower, address indexed followed);
+
+    /// @notice Emitted when a user likes an article
+    /// @param tokenId The article identifier
+    /// @param user The address that liked
+    event LikeAdded(uint256 indexed tokenId, address indexed user);
+
+    /// @notice Emitted when a user unlikes an article
+    /// @param tokenId The article identifier
+    /// @param user The address that unliked
+    event LikeRemoved(uint256 indexed tokenId, address indexed user);
+
+    /// @notice Emitted when a user tips an author
+    /// @param tokenId The article identifier
+    /// @param tipper The address that sent the tip
+    /// @param author The article author receiving the tip
+    /// @param amount The amount of ETH tipped
+    event TipReceived(uint256 indexed tokenId, address indexed tipper, address indexed author, uint256 amount);
 
     /// @notice Initialize the contract with ERC721 token details
     constructor() ERC721("Paper Article", "PAPER") {
@@ -303,6 +326,73 @@ contract Paper is ERC721URIStorage {
         }
 
         return result;
+    }
+
+    /// @notice Like an article
+    /// @param tokenId The article identifier
+    function likeArticle(uint256 tokenId) external {
+        require(tokenId < articleCount, "Paper: article does not exist");
+        require(!likedBy[tokenId][msg.sender], "Paper: already liked");
+
+        likedBy[tokenId][msg.sender] = true;
+        likeCount[tokenId]++;
+
+        emit LikeAdded(tokenId, msg.sender);
+    }
+
+    /// @notice Unlike an article
+    /// @param tokenId The article identifier
+    function unlikeArticle(uint256 tokenId) external {
+        require(tokenId < articleCount, "Paper: article does not exist");
+        require(likedBy[tokenId][msg.sender], "Paper: not liked");
+
+        likedBy[tokenId][msg.sender] = false;
+        likeCount[tokenId]--;
+
+        emit LikeRemoved(tokenId, msg.sender);
+    }
+
+    /// @notice Check if a user has liked an article
+    /// @param tokenId The article identifier
+    /// @param user The address to check
+    /// @return true if user has liked the article
+    function hasLiked(uint256 tokenId, address user) external view returns (bool) {
+        return likedBy[tokenId][user];
+    }
+
+    /// @notice Get the total like count for an article
+    /// @param tokenId The article identifier
+    /// @return Number of likes
+    function getLikeCount(uint256 tokenId) external view returns (uint256) {
+        return likeCount[tokenId];
+    }
+
+    /// @notice Tip the author of an article
+    /// @param tokenId The article identifier
+    function tipAuthor(uint256 tokenId) external payable {
+        require(tokenId < articleCount, "Paper: article does not exist");
+        require(msg.value > 0, "Paper: no ETH sent");
+
+        address author = articleMeta[tokenId].author;
+        require(author != msg.sender, "Paper: cannot tip self");
+
+        (bool success,) = payable(author).call{ value: msg.value }("");
+        require(success, "Paper: transfer failed");
+
+        emit TipReceived(tokenId, msg.sender, author, msg.value);
+    }
+
+    /// @notice Tip a user directly (by their address)
+    /// @param user The address to tip
+    function tipUser(address user) external payable {
+        require(user != address(0), "Paper: invalid address");
+        require(user != msg.sender, "Paper: cannot tip self");
+        require(msg.value > 0, "Paper: no ETH sent");
+
+        (bool success,) = payable(user).call{ value: msg.value }("");
+        require(success, "Paper: transfer failed");
+
+        emit TipReceived(0, msg.sender, user, msg.value);
     }
 }
 

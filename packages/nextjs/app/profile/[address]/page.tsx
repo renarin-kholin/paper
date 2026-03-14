@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { BookmarkPlus, Globe, Loader2, Sparkles, Star, Twitter, User } from "lucide-react";
+import { BookmarkPlus, Globe, Loader2, Star, Twitter, User } from "lucide-react";
 import { useAccount } from "wagmi";
 import { FollowButton } from "~~/components/FollowButton";
+import { LikeButton } from "~~/components/LikeButton";
+import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { UserProfile, fetchFromIPFS, fetchProfileFromIPFS, getIPFSGatewayUrl } from "~~/lib/ipfs";
 
@@ -84,9 +86,9 @@ function AuthorPostCard({ id }: { id: bigint }) {
           </div>
         </Link>
         <div className="flex items-center justify-between mt-4">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
             {isPaywalled && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
-            <Sparkles className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+            <LikeButton articleId={id} />
             <span>4 min read</span>
           </div>
           <div className="flex items-center gap-3 text-stone-400">
@@ -224,7 +226,12 @@ export default function PublicProfilePage() {
             <h1 className="text-3xl font-bold text-stone-900 mb-2">{displayName}</h1>
             <p className="text-stone-600 text-lg">{displayBio}</p>
           </div>
-          {!isOwnProfile && <FollowButton targetAddress={address} />}
+          {!isOwnProfile && (
+            <div className="flex items-center gap-2">
+              <TipButton authorAddress={address} />
+              <FollowButton targetAddress={address} />
+            </div>
+          )}
           {isOwnProfile && (
             <Link
               href="/profile"
