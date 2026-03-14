@@ -8,7 +8,7 @@ import { Address } from "@scaffold-ui/components";
 import { Globe, Star, Twitter, User, Users } from "lucide-react";
 import { getAddress, isAddress } from "viem";
 import { useAccount } from "wagmi";
-import { useEnsAddress, useEnsName } from "wagmi";
+import { useEnsName } from "wagmi";
 import { BookmarkButton } from "~~/components/BookmarkButton";
 import { FollowButton } from "~~/components/FollowButton";
 import { LikeButton } from "~~/components/LikeButton";
@@ -16,7 +16,7 @@ import { CenteredSpinner, ProfilePageSkeleton } from "~~/components/LoadingState
 import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowerCount, useFollowingCount } from "~~/hooks/scaffold-eth/useFollowingList";
-import { resolveUsername } from "~~/lib/ens-identity";
+import { resolveEnsAddress, resolveUsername } from "~~/lib/ens-identity";
 import {
   UserProfile,
   calculateReadTime,
@@ -163,23 +163,41 @@ export default function PublicProfilePage() {
   const isEnsParam = routeParam.toLowerCase().endsWith(".eth");
   const isAddressParam = isAddress(routeParam);
 
-  const { data: ensResolvedAddress, isLoading: isEnsLoading } = useEnsAddress({
-    name: isEnsParam ? routeParam : undefined,
-    chainId: 1,
-    query: { enabled: isEnsParam },
-  });
+  const [resolvedAddress, setResolvedAddress] = useState<string | undefined>();
+  const [isEnsLoading, setIsEnsLoading] = useState(false);
 
-  const resolvedAddress = useMemo(() => {
-    if (isAddressParam) return getAddress(routeParam);
-    if (isEnsParam && ensResolvedAddress) return getAddress(ensResolvedAddress);
-    return undefined;
-  }, [ensResolvedAddress, isAddressParam, isEnsParam, routeParam]);
+  useEffect(() => {
+    async function resolveName() {
+      if (!isEnsParam || !routeParam) {
+        setResolvedAddress(isAddressParam ? getAddress(routeParam) : undefined);
+        return;
+      }
+
+      setIsEnsLoading(true);
+      try {
+        const address = await resolveEnsAddress(routeParam);
+        if (address) {
+          setResolvedAddress(getAddress(address));
+        } else {
+          setResolvedAddress(undefined);
+        }
+      } catch {
+        setResolvedAddress(undefined);
+      } finally {
+        setIsEnsLoading(false);
+      }
+    }
+
+    resolveName();
+  }, [isEnsParam, isAddressParam, routeParam]);
 
   const { address: connectedAddress } = useAccount();
 
+  const ENS_CHAIN_ID = Number(process.env.NEXT_PUBLIC_ENS_CHAIN_ID || "11155111");
+
   const { data: resolvedEnsName } = useEnsName({
     address: resolvedAddress,
-    chainId: 1,
+    chainId: ENS_CHAIN_ID,
     query: { enabled: Boolean(resolvedAddress) },
   });
 

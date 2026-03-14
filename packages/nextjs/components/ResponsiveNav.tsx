@@ -1,10 +1,13 @@
 "use client";
 
 import type { ComponentType } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookMarked, Home, Megaphone, Pen, User } from "lucide-react";
 import { useAccount, useEnsAvatar, useEnsName } from "wagmi";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { fetchProfileFromIPFS, getIPFSGatewayUrl, UserProfile } from "~~/lib/ipfs";
 
 type NavItem = {
   href: string;
@@ -28,16 +31,58 @@ const isActivePath = (pathname: string, href: string) => {
 export const ResponsiveNav = () => {
   const pathname = usePathname();
   const { address } = useAccount();
+  const ENS_CHAIN_ID = Number(process.env.NEXT_PUBLIC_ENS_CHAIN_ID || "11155111");
   const { data: ensName } = useEnsName({
     address,
-    chainId: 1,
+    chainId: ENS_CHAIN_ID,
     query: { enabled: Boolean(address) },
   });
   const { data: ensAvatar } = useEnsAvatar({
     name: ensName || undefined,
-    chainId: 1,
+    chainId: ENS_CHAIN_ID,
     query: { enabled: Boolean(ensName) },
   });
+
+  const { data: profileCID } = useScaffoldReadContract({
+    contractName: "Paper",
+    functionName: "getUserProfileCID" as any,
+    args: address ? ([address] as any) : undefined,
+    query: { enabled: Boolean(address) },
+  });
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [ipfsAvatar, setIpfsAvatar] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const cid = typeof profileCID === "string" ? profileCID : "";
+
+    if (!cid) {
+      setProfile(null);
+      setIpfsAvatar(null);
+      return;
+    }
+
+    fetchProfileFromIPFS(cid)
+      .then(data => {
+        if (!active) return;
+        setProfile(data);
+        if (data.avatar) {
+          setIpfsAvatar(getIPFSGatewayUrl(data.avatar));
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setProfile(null);
+        setIpfsAvatar(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [profileCID]);
+
+  const avatar = ensAvatar || ipfsAvatar;
 
   return (
     <>
@@ -58,9 +103,9 @@ export const ResponsiveNav = () => {
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                {item.href === "/profile" && ensAvatar ? (
+                {item.href === "/profile" && avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={ensAvatar} alt="Profile avatar" className="h-6 w-6 rounded-full object-cover" />
+                  <img src={avatar} alt="Profile avatar" className="h-6 w-6 rounded-full object-cover" />
                 ) : (
                   <Icon className="w-6 h-6 stroke-[1.5]" />
                 )}
@@ -86,9 +131,9 @@ export const ResponsiveNav = () => {
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                {item.href === "/profile" && ensAvatar ? (
+                {item.href === "/profile" && avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={ensAvatar} alt="Profile avatar" className="h-5 w-5 rounded-full object-cover" />
+                  <img src={avatar} alt="Profile avatar" className="h-5 w-5 rounded-full object-cover" />
                 ) : (
                   <Icon className="w-5 h-5" />
                 )}

@@ -12,23 +12,25 @@ import { FaucetButton } from "~~/components/scaffold-eth";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { resolveUsername } from "~~/lib/ens-identity";
-import { UserProfile, fetchProfileFromIPFS } from "~~/lib/ipfs";
+import { UserProfile, fetchProfileFromIPFS, getIPFSGatewayUrl } from "~~/lib/ipfs";
 
 export const UserMenu = () => {
   const { isConnected, chain, address } = useAccount();
   const { disconnect } = useDisconnect();
   const menuRef = useRef<HTMLDetailsElement>(null);
+  const ENS_CHAIN_ID = Number(process.env.NEXT_PUBLIC_ENS_CHAIN_ID || "11155111");
   const { data: ensName } = useEnsName({
     address,
-    chainId: 1,
+    chainId: ENS_CHAIN_ID,
     query: { enabled: Boolean(address) },
   });
   const { data: ensAvatar } = useEnsAvatar({
     name: ensName || undefined,
-    chainId: 1,
+    chainId: ENS_CHAIN_ID,
     query: { enabled: Boolean(ensName) },
   });
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [ipfsAvatar, setIpfsAvatar] = useState<string | null>(null);
 
   const { data: profileCID } = useScaffoldReadContract({
     contractName: "Paper",
@@ -43,6 +45,7 @@ export const UserMenu = () => {
 
     if (!cid) {
       setProfile(null);
+      setIpfsAvatar(null);
       return;
     }
 
@@ -50,16 +53,22 @@ export const UserMenu = () => {
       .then(data => {
         if (!active) return;
         setProfile(data);
+        if (data.avatar) {
+          setIpfsAvatar(getIPFSGatewayUrl(data.avatar));
+        }
       })
       .catch(() => {
         if (!active) return;
         setProfile(null);
+        setIpfsAvatar(null);
       });
 
     return () => {
       active = false;
     };
   }, [profileCID]);
+
+  const avatar = ensAvatar || ipfsAvatar;
 
   const username = resolveUsername({
     ensName,
@@ -76,9 +85,9 @@ export const UserMenu = () => {
   return (
     <details ref={menuRef} className="relative group">
       <summary className="w-9 h-9 rounded-full bg-stone-200 flex items-center justify-center overflow-hidden hover:bg-stone-300 active:scale-[0.98] list-none cursor-pointer border border-stone-300/60">
-        {ensAvatar ? (
+        {avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={ensAvatar} alt="Profile avatar" className="h-full w-full object-cover" />
+          <img src={avatar} alt="Profile avatar" className="h-full w-full object-cover" />
         ) : (
           <User className="w-5 h-5 text-stone-500" />
         )}
