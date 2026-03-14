@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -143,7 +143,7 @@ function SearchResultCard({
   );
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const searchParams = useSearchParams();
   const query = (searchParams.get("q") || "").toLowerCase().trim();
   const isEnsQuery = query.endsWith(".eth");
@@ -230,5 +230,22 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8">
+          <div className="mb-8">
+            <div className="h-8 w-48 bg-stone-100 rounded animate-pulse mb-2" />
+            <div className="h-10 w-64 bg-stone-100 rounded animate-pulse" />
+          </div>
+        </div>
+      }
+    >
+      <SearchPageContent />
+    </Suspense>
   );
 }
