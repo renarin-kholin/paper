@@ -6,6 +6,16 @@ import { useAccount } from "wagmi";
 import { useScaffoldEventHistory, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { fetchCommentFromIPFS, uploadCommentToIPFS } from "~~/lib/ipfs";
 
+interface CommentEvent {
+  articleId: bigint;
+  author: string;
+  cid: string;
+  timestamp: bigint;
+  blockNumber: bigint;
+  blockHash: string;
+  transactionHash: string;
+}
+
 interface CommentWithBody {
   author: string;
   body: string;
@@ -25,8 +35,9 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: events } = useScaffoldEventHistory({
+  const { data: events, refetch } = useScaffoldEventHistory({
     contractName: "Social",
     eventName: "CommentAdded",
     fromBlock: 0n,
@@ -36,39 +47,53 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
   useEffect(() => {
     async function loadComments() {
+      console.log("Loading comments, events:", events);
+
       if (!events || !Array.isArray(events)) {
+        console.log("No events array, setting empty");
         setIsLoading(false);
         return;
       }
 
+      const typedEvents = events as unknown as CommentEvent[];
+      console.log("Typed events:", typedEvents);
+
       const loadedComments: CommentWithBody[] = [];
 
-      for (const event of events) {
-        const cid = (event as Record<string, unknown>).cid as string | undefined;
-        const author = (event as Record<string, unknown>).author as string | undefined;
-        const timestamp = Number(((event as Record<string, unknown>).timestamp as bigint) || 0n);
-        const txHash = (event as Record<string, unknown>).transactionHash as string | undefined;
+      for (const event of typedEvents) {
+        console.log("Processing event:", event);
 
-        if (!cid || !author) continue;
+        const author = event.author;
+        const cid = event.cid;
+        const timestamp = Number(event.timestamp || 0n);
+        const txHash = event.transactionHash;
 
-        try {
-          const commentData = await fetchCommentFromIPFS(cid);
-          loadedComments.push({
-            author,
-            body: commentData.body || "[Comment]",
-            timestamp: commentData.createdAt || timestamp * 1000,
-            transactionHash: txHash || "",
-          });
-        } catch {
-          loadedComments.push({
-            author,
-            body: "[Failed to load comment]",
-            timestamp: timestamp * 1000,
-            transactionHash: txHash || "",
-          });
+        if (!author) {
+          console.log("Skipping: no author");
+          continue;
         }
+
+        let body = "[Comment content unavailable]";
+
+        if (cid) {
+          try {
+            const commentData = await fetchCommentFromIPFS(cid);
+            body = commentData.body || body;
+            console.log("Fetched comment:", commentData);
+          } catch (err) {
+            console.log("IPFS fetch failed:", err);
+          }
+        }
+
+        loadedComments.push({
+          author,
+          body,
+          timestamp: timestamp * 1000,
+          transactionHash: txHash || "",
+        });
       }
 
+      console.log("Loaded comments:", loadedComments);
       setComments(loadedComments.reverse());
       setIsLoading(false);
     }
@@ -81,6 +106,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
     if (!newComment.trim() || !isConnected || !connectedAddress) return;
 
     setIsSubmitting(true);
+    setError(null);
     try {
       const commentData = {
         author: connectedAddress,
@@ -88,16 +114,22 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         createdAt: Date.now(),
       };
 
+      console.log("Uploading comment:", commentData);
+
       const cid = await uploadCommentToIPFS(commentData);
+      console.log("Uploaded to IPFS, cid:", cid);
 
       await writeContractAsync({
-        functionName: "addComment" as any,
+        functionName: "addComment",
         args: [articleId, cid] as any,
       });
+      console.log("Contract call successful");
 
       setNewComment("");
-    } catch (err) {
+      refetch();
+    } catch (err: any) {
       console.error("Failed to add comment:", err);
+      setError(err.message || "Failed to add comment");
     } finally {
       setIsSubmitting(false);
     }
@@ -109,6 +141,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   };
 
   const formatDate = (timestamp: number) => {
+    if (!timestamp || timestamp === 0) return "";
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -129,6 +162,8 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         <MessageCircle className="w-5 h-5" />
         <h2 className="text-xl font-bold text-stone-900">Responses {comments.length > 0 && `(${comments.length})`}</h2>
       </div>
+
+      {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
 
       {isConnected ? (
         <form onSubmit={handleSubmit} className="mb-8">
@@ -165,7 +200,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         <div className="space-y-6">
           {comments.map(comment => (
             <div
-              key={comment.transactionHash || comment.timestamp}
+              key={comment.transactionHash || Math.random()}
               className="border-b border-stone-100 pb-6 last:border-0"
             >
               <div className="flex items-center gap-2 mb-2">
