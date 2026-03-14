@@ -2119,7 +2119,7 @@ const deployedContracts = {
   },
   84532: {
     Paper: {
-      address: "0x3193fd94733e770aacbd49c3b09cb9defa928275",
+      address: "0x93eddbef5a7b5efcc96ffded6dd26127ed679017",
       abi: [
         {
           type: "constructor",
@@ -3074,10 +3074,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 38857713,
+      deployedOnBlock: 38864415,
     },
     Social: {
-      address: "0x611e728a07b3b6e4a1e77c48c5d15ab81c5d8dba",
+      address: "0x94725649a2a69981b12649ad2b71947e3b32ffb4",
       abi: [
         {
           type: "function",
@@ -3690,7 +3690,543 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 38857713,
+      deployedOnBlock: 38864415,
+    },
+    AdCampaigns: {
+      address: "0x04e809ce4e53d6c339d13baa7f212bdaf77730e8",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            {
+              name: "_paperContract",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "MAX_DURATION_DAYS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "MIN_DURATION_DAYS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "SECONDS_PER_DAY",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "activeCampaignByArticle",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "advertiserCampaigns",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "calculateCampaignCost",
+          inputs: [
+            {
+              name: "dailyRateWei",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "durationDays",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "campaignCount",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "campaigns",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "advertiser",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "articleId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "imageCid",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "linkUrl",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "startTime",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "endTime",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "dailyRateWei",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalPaid",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "active",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "createCampaign",
+          inputs: [
+            {
+              name: "articleId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "durationDays",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "dailyRateWei",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "imageCid",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "linkUrl",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "payable",
+        },
+        {
+          type: "function",
+          name: "getActiveCampaign",
+          inputs: [
+            {
+              name: "articleId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple",
+              internalType: "struct AdCampaigns.Campaign",
+              components: [
+                {
+                  name: "advertiser",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "articleId",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "imageCid",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "linkUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "startTime",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "endTime",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "dailyRateWei",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "totalPaid",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "active",
+                  type: "bool",
+                  internalType: "bool",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getArticleDailyRate",
+          inputs: [
+            {
+              name: "articleId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCampaign",
+          inputs: [
+            {
+              name: "campaignId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple",
+              internalType: "struct AdCampaigns.Campaign",
+              components: [
+                {
+                  name: "advertiser",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "articleId",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "imageCid",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "linkUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "startTime",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "endTime",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "dailyRateWei",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "totalPaid",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "active",
+                  type: "bool",
+                  internalType: "bool",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCampaignsByAdvertiser",
+          inputs: [
+            {
+              name: "advertiser",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "hasActiveCampaign",
+          inputs: [
+            {
+              name: "articleId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "paperContract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "event",
+          name: "CampaignCreated",
+          inputs: [
+            {
+              name: "campaignId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "articleId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "advertiser",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "durationDays",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "totalPaid",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "imageCid",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "linkUrl",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "CampaignEnded",
+          inputs: [
+            {
+              name: "campaignId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "articleId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "endTime",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "CampaignStarted",
+          inputs: [
+            {
+              name: "campaignId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "articleId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "startTime",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 38864415,
     },
   },
 } as const;
