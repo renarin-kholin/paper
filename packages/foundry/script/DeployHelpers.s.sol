@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import { Script, console } from "forge-std/Script.sol";
-import { Vm } from "forge-std/Vm.sol";
+import {Script} from "forge-std/Script.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 contract ScaffoldETHDeploy is Script {
     error InvalidChain();
@@ -38,7 +38,7 @@ contract ScaffoldETHDeploy is Script {
 
     function _startBroadcast() internal returns (address) {
         vm.startBroadcast();
-        (, address _deployer,) = vm.readCallers();
+        (, address _deployer, ) = vm.readCallers();
 
         if (block.chainid == 31337 && _deployer.balance == 0) {
             try vm.deal(_deployer, ANVIL_BASE_BALANCE) {
@@ -66,7 +66,11 @@ contract ScaffoldETHDeploy is Script {
         uint256 len = deployments.length;
 
         for (uint256 i = 0; i < len; i++) {
-            vm.serializeString(jsonWrite, vm.toString(deployments[i].addr), deployments[i].name);
+            vm.serializeString(
+                jsonWrite,
+                vm.toString(deployments[i].addr),
+                deployments[i].name
+            );
         }
 
         string memory chainName;

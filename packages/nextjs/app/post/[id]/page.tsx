@@ -15,7 +15,14 @@ import { LikeButton } from "~~/components/LikeButton";
 import { PostPageSkeleton } from "~~/components/LoadingStates";
 import { TipButton } from "~~/components/TipButton";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { type ArticleMetadata, ETH_ADDRESS, calculateReadTime, fetchFromIPFS, resolveIPFSUrl } from "~~/lib/ipfs";
+import {
+  type ArticleMetadata,
+  type Campaign,
+  ETH_ADDRESS,
+  calculateReadTime,
+  fetchFromIPFS,
+  resolveIPFSUrl,
+} from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
 
@@ -28,6 +35,7 @@ export default function PostPage() {
   const [content, setContent] = useState<ArticleMetadata | null>(null);
   const [contentError, setContentError] = useState<string | null>(null);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [activeCampaignImage, setActiveCampaignImage] = useState<string | null>(null);
 
   const { data: meta, isLoading: metaLoading } = useScaffoldReadContract({
     contractName: "Paper",
@@ -49,6 +57,12 @@ export default function PostPage() {
   });
 
   const { writeContractAsync, isPending: isUnlocking } = useScaffoldWriteContract({ contractName: "Paper" });
+
+  const { data: activeCampaign } = useScaffoldReadContract({
+    contractName: "AdCampaigns",
+    functionName: "getActiveCampaign",
+    args: [tokenId],
+  });
   const { writeContractAsync: writeErc20Async, isPending: isApproving } = useWriteContract();
   const { data: paperContract } = useDeployedContractInfo({ contractName: "Paper" });
 
@@ -121,6 +135,16 @@ export default function PostPage() {
       active = false;
     };
   }, [author, cid, createdAt, price, priceToken, showPaywall, title, tokenId]);
+
+  // Load active campaign image
+  useEffect(() => {
+    if (activeCampaign?.imageCid) {
+      const imageUrl = resolveIPFSUrl(activeCampaign.imageCid);
+      setActiveCampaignImage(imageUrl);
+    } else {
+      setActiveCampaignImage(null);
+    }
+  }, [activeCampaign]);
 
   const readTime = useMemo(() => {
     return content?.content ? calculateReadTime(content.content) : 1;
@@ -241,26 +265,57 @@ export default function PostPage() {
         )}
       </div>
 
-      {adSpace?.enabled && (
-        <section className="mb-12 rounded-2xl border border-stone-200 bg-stone-50 p-6">
-          <div className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-            <Megaphone className="h-4 w-4" />
-            Ad Space
-          </div>
-          <h3 className="mb-2 text-xl font-semibold text-stone-900">Sponsor this story</h3>
-          <p className="text-stone-600">
-            Reserve this placement for ${adSpace.dailyPriceUsd}/day and reach engaged readers.
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/signup"
-              className="inline-flex items-center rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-stone-800"
-            >
-              Create Campaign
-            </Link>
-          </div>
-        </section>
-      )}
+      {activeCampaign &&
+        activeCampaign.advertiser !== "0x0000000000000000000000000000000000000000" &&
+        activeCampaign.active &&
+        (typeof activeCampaign.endTime === "bigint" ? Date.now() < Number(activeCampaign.endTime) * 1000 : true) && (
+          <section className="mb-12 rounded-2xl border border-stone-200 bg-white p-6">
+            <div className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              <Megaphone className="h-4 w-4" />
+              Sponsored
+            </div>
+            <a href={activeCampaign.linkUrl} target="_blank" rel="noopener noreferrer" className="block group">
+              {activeCampaignImage && (
+                <div className="relative w-full h-64 mb-4 rounded-lg overflow-hidden bg-stone-100">
+                  <Image
+                    src={activeCampaignImage}
+                    alt="Advertisement"
+                    fill
+                    className="object-contain group-hover:opacity-90 transition-opacity"
+                  />
+                </div>
+              )}
+              <div className="text-sm text-stone-500 group-hover:text-stone-700">
+                Advertisement • {activeCampaign.linkUrl}
+              </div>
+            </a>
+          </section>
+        )}
+
+      {adSpace?.enabled &&
+        (!activeCampaign ||
+          activeCampaign.advertiser === "0x0000000000000000000000000000000000000000" ||
+          !activeCampaign.active ||
+          (typeof activeCampaign.endTime === "bigint" && Date.now() >= Number(activeCampaign.endTime) * 1000)) && (
+          <section className="mb-12 rounded-2xl border border-stone-200 bg-stone-50 p-6">
+            <div className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              <Megaphone className="h-4 w-4" />
+              Ad Space Available
+            </div>
+            <h3 className="mb-2 text-xl font-semibold text-stone-900">Sponsor this story</h3>
+            <p className="text-stone-600">
+              Reserve this placement for ${adSpace.dailyPriceUsd}/day and reach engaged readers.
+            </p>
+            <div className="mt-4">
+              <Link
+                href={`/campaigns/create?articleId=${tokenId.toString()}`}
+                className="inline-flex items-center rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-stone-800"
+              >
+                Create Campaign
+              </Link>
+            </div>
+          </section>
+        )}
 
       <CommentSection articleId={tokenId} />
 
