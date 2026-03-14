@@ -3,24 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, MessageCircle, RefreshCw, Send } from "lucide-react";
 import { useAccount } from "wagmi";
-import { useScaffoldEventHistory, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { fetchCommentFromIPFS, uploadCommentToIPFS } from "~~/lib/ipfs";
 
-interface CommentEvent {
-  articleId: bigint;
-  author: string;
+interface StoredComment {
   cid: string;
-  timestamp: bigint;
-  blockNumber: bigint;
-  blockHash: string;
-  transactionHash: string;
+  author: string;
+  timestamp: number;
 }
 
 interface CommentWithBody {
   author: string;
   body: string;
   timestamp: number;
-  transactionHash: string;
+  key: string;
 }
 
 interface CommentSectionProps {
@@ -29,7 +24,6 @@ interface CommentSectionProps {
 
 export function CommentSection({ articleId }: CommentSectionProps) {
   const { address: connectedAddress, isConnected } = useAccount();
-  const { writeContractAsync } = useScaffoldWriteContract({ contractName: "Social" });
 
   const [comments, setComments] = useState<CommentWithBody[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,60 +31,69 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: events } = useScaffoldEventHistory({
-    contractName: "Social",
-    eventName: "CommentAdded",
-    fromBlock: 0n,
-    filters: { articleId },
-    watch: false,
-  });
+  const getStorageKey = useCallback(() => `paper:comments:${articleId.toString()}`, [articleId]);
+
+  const readStoredComments = useCallback((): StoredComment[] => {
+    if (typeof window === "undefined") return [];
+
+    try {
+      const raw = window.localStorage.getItem(getStorageKey());
+      if (!raw) return [];
+
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+
+      return parsed.filter(comment => {
+        if (typeof comment !== "object" || comment === null) return false;
+        const candidate = comment as Partial<StoredComment>;
+        return (
+          typeof candidate.cid === "string" &&
+          typeof candidate.author === "string" &&
+          typeof candidate.timestamp === "number"
+        );
+      }) as StoredComment[];
+    } catch {
+      return [];
+    }
+  }, [getStorageKey]);
 
   const loadComments = useCallback(async () => {
-    if (!events || !Array.isArray(events)) {
-      setIsLoading(false);
-      return;
-    }
+    const storedComments = readStoredComments();
+    const loadedComments = await Promise.all(
+      storedComments.map(async comment => {
+        const { author, cid, timestamp } = comment;
+        if (!author || !cid) return null;
 
-    const typedEvents = events as unknown as CommentEvent[];
-    const loadedComments: CommentWithBody[] = [];
-
-    for (const event of typedEvents) {
-      const author = event.author;
-      const cid = event.cid;
-      const timestamp = Number(event.timestamp || 0n);
-      const txHash = event.transactionHash;
-
-      if (!author) continue;
-
-      let body = "[Comment unavailable]";
-      if (cid) {
+        let body = "[Comment unavailable]";
         try {
           const data = await fetchCommentFromIPFS(cid);
           body = data.body || body;
         } catch {
-          // Keep fallback
+          // Keep fallback body when IPFS fetch fails.
         }
-      }
 
-      loadedComments.push({
-        author,
-        body,
-        timestamp: timestamp * 1000,
-        transactionHash: txHash || "",
-      });
-    }
+        return {
+          author,
+          body,
+          timestamp,
+          key: `${cid}:${timestamp}`,
+        } as CommentWithBody;
+      }),
+    );
 
-    setComments(loadedComments.reverse());
+    const validComments = loadedComments.filter(Boolean) as CommentWithBody[];
+    validComments.sort((a, b) => b.timestamp - a.timestamp);
+    setComments(validComments);
     setIsLoading(false);
-  }, [events]);
+  }, [readStoredComments]);
 
   useEffect(() => {
     loadComments();
   }, [loadComments]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsLoading(true);
-    loadComments();
+    await loadComments();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,6 +102,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
     setIsSubmitting(true);
     setError(null);
+
     try {
       const commentData = {
         author: connectedAddress,
@@ -107,14 +111,23 @@ export function CommentSection({ articleId }: CommentSectionProps) {
       };
 
       const cid = await uploadCommentToIPFS(commentData);
+      const existing = readStoredComments();
+      const nextComments: StoredComment[] = [
+        ...existing,
+        {
+          cid,
+          author: connectedAddress,
+          timestamp: Date.now(),
+        },
+      ];
 
-      await writeContractAsync({
-        functionName: "addComment",
-        args: [articleId, cid] as any,
-      });
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(getStorageKey(), JSON.stringify(nextComments));
+      }
 
       setNewComment("");
-      handleRefresh();
+      setIsLoading(true);
+      await loadComments();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to add comment";
       setError(msg);
@@ -198,10 +211,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
       ) : comments.length > 0 ? (
         <div className="space-y-6">
           {comments.map(comment => (
-            <div
-              key={comment.transactionHash || Math.random()}
-              className="border-b border-stone-100 pb-6 last:border-0"
-            >
+            <div key={comment.key} className="border-b border-stone-100 pb-6 last:border-0">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-xs font-medium text-stone-600">
                   {comment.author ? comment.author.slice(2, 4).toUpperCase() : "??"}

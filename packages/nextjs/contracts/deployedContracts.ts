@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Paper: {
-      address: "0x12975173b87f7595ee45dffb2ab812ece596bf84",
+      address: "0x067c804bb006836469379d4a2a69a81803bd1f45",
       abi: [
         {
           type: "constructor",
@@ -962,29 +962,11 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 37,
+      deployedOnBlock: 63,
     },
     Social: {
-      address: "0x82dc47734901ee7d4f4232f398752cb9dd5daccc",
+      address: "0x45009dd3abbe29db54fc5d893ceaa98a624882df",
       abi: [
-        {
-          type: "function",
-          name: "addComment",
-          inputs: [
-            {
-              name: "articleId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "cid",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
         {
           type: "function",
           name: "follow",
@@ -1262,37 +1244,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "CommentAdded",
-          inputs: [
-            {
-              name: "articleId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "author",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "cid",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "timestamp",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "Followed",
           inputs: [
             {
@@ -1394,7 +1345,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 38,
+      deployedOnBlock: 63,
     },
   },
 } as const;
