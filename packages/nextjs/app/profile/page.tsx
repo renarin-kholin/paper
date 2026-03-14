@@ -24,8 +24,9 @@ const defaultProfile: UserProfile = {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, status } = useAccount();
   const [isWalletReady, setIsWalletReady] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -53,10 +54,15 @@ export default function ProfilePage() {
   }, [address]);
 
   useEffect(() => {
-    if (isWalletReady && !isConnected) {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || !isWalletReady) return;
+    if (status === "disconnected") {
       router.push("/signup");
     }
-  }, [isWalletReady, isConnected, router]);
+  }, [isMounted, isWalletReady, status, router]);
 
   useEffect(() => {
     async function loadProfile() {
