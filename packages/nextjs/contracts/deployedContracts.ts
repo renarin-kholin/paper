@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Paper: {
-      address: "0xb19b36b1456e65e3a6d514d3f715f204bd59f431",
+      address: "0xa15bb66138824a1c7167f5e85b957d04dd34e468",
       abi: [
         {
           type: "constructor",
@@ -131,6 +131,81 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "follow",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "followerCount",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "following",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "followingCount",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getApproved",
           inputs: [
             {
@@ -239,6 +314,63 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getArticlesByAuthor",
+          inputs: [
+            {
+              name: "author",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getFollowers",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getFollowing",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getUserProfileCID",
           inputs: [
             {
@@ -315,6 +447,30 @@ const deployedContracts = {
             },
             {
               name: "operator",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isFollowing",
+          inputs: [
+            {
+              name: "follower",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "followed",
               type: "address",
               internalType: "address",
             },
@@ -582,6 +738,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "unfollow",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "usdc",
           inputs: [],
           outputs: [
@@ -758,6 +927,25 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "Followed",
+          inputs: [
+            {
+              name: "follower",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "followed",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "MetadataUpdate",
           inputs: [
             {
@@ -815,6 +1003,25 @@ const deployedContracts = {
               type: "uint256",
               indexed: true,
               internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "Unfollowed",
+          inputs: [
+            {
+              name: "follower",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "followed",
+              type: "address",
+              indexed: true,
+              internalType: "address",
             },
           ],
           anonymous: false,
@@ -943,7 +1150,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 9,
+      deployedOnBlock: 5,
     },
   },
 } as const;

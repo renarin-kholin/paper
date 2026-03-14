@@ -35,6 +35,15 @@ contract Paper is ERC721URIStorage {
     /// @notice Maps user address to their IPFS profile CID
     mapping(address => string) public userProfileCIDs;
 
+    /// @notice Track who follows whom (follower => followed => bool)
+    mapping(address => mapping(address => bool)) public following;
+
+    /// @notice Count of followers for each user
+    mapping(address => uint256) public followerCount;
+
+    /// @notice Count of users being followed by each user
+    mapping(address => uint256) public followingCount;
+
     /// @notice USDC interface for transfers
     IERC20 public usdc;
 
@@ -64,6 +73,16 @@ contract Paper is ERC721URIStorage {
     /// @param user The user address
     /// @param cid The new IPFS profile CID
     event UserProfileUpdated(address indexed user, string cid);
+
+    /// @notice Emitted when a user follows another
+    /// @param follower The address that followed
+    /// @param followed The address being followed
+    event Followed(address indexed follower, address indexed followed);
+
+    /// @notice Emitted when a user unfollows another
+    /// @param follower The address that unfollowed
+    /// @param followed The address being unfollowed
+    event Unfollowed(address indexed follower, address indexed followed);
 
     /// @notice Initialize the contract with ERC721 token details
     constructor() ERC721("Paper Article", "PAPER") {
@@ -190,6 +209,100 @@ contract Paper is ERC721URIStorage {
     /// @return The IPFS CID for the user profile
     function getUserProfileCID(address user) external view returns (string memory) {
         return userProfileCIDs[user];
+    }
+
+    /// @notice Get all article IDs by author
+    /// @param author The author address
+    /// @return Array of article token IDs
+    function getArticlesByAuthor(address author) external view returns (uint256[] memory) {
+        uint256 total = articleCount;
+        uint256[] memory result = new uint256[](total);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < total; i++) {
+            if (articleMeta[i].author == author) {
+                result[count] = i;
+                count++;
+            }
+        }
+
+        uint256[] memory finalResult = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            finalResult[i] = result[i];
+        }
+        return finalResult;
+    }
+
+    /// @notice Follow a user
+    /// @param user The address to follow
+    function follow(address user) external {
+        require(user != msg.sender, "Paper: cannot follow self");
+        require(user != address(0), "Paper: invalid address");
+        require(!following[msg.sender][user], "Paper: already following");
+
+        following[msg.sender][user] = true;
+        followingCount[msg.sender]++;
+        followerCount[user]++;
+
+        emit Followed(msg.sender, user);
+    }
+
+    /// @notice Unfollow a user
+    /// @param user The address to unfollow
+    function unfollow(address user) external {
+        require(following[msg.sender][user], "Paper: not following");
+
+        following[msg.sender][user] = false;
+        followingCount[msg.sender]--;
+        followerCount[user]--;
+
+        emit Unfollowed(msg.sender, user);
+    }
+
+    /// @notice Check if one user follows another
+    /// @param follower The potential follower
+    /// @param followed The potential followed user
+    /// @return true if follower follows followed
+    function isFollowing(address follower, address followed) external view returns (bool) {
+        return following[follower][followed];
+    }
+
+    /// @notice Get list of followers for a user
+    /// @param user The user to get followers for
+    /// @return Array of follower addresses
+    function getFollowers(address user) external view returns (address[] memory) {
+        uint256 total = followerCount[user];
+        address[] memory result = new address[](total);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < articleCount; i++) {
+            address potentialFollower = articleMeta[i].author;
+            if (following[potentialFollower][user]) {
+                result[count] = potentialFollower;
+                count++;
+            }
+        }
+
+        return result;
+    }
+
+    /// @notice Get list of users that a user is following
+    /// @param user The user to get following list for
+    /// @return Array of addresses being followed
+    function getFollowing(address user) external view returns (address[] memory) {
+        uint256 total = articleCount;
+        address[] memory result = new address[](followingCount[user]);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < total; i++) {
+            address potentialFollowed = articleMeta[i].author;
+            if (following[user][potentialFollowed]) {
+                result[count] = potentialFollowed;
+                count++;
+            }
+        }
+
+        return result;
     }
 }
 

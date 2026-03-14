@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -99,9 +100,12 @@ export default function PostPage() {
 
         <div className="flex items-center gap-4 pb-8 border-b border-stone-100">
           <div>
-            <div className="font-medium text-stone-900">
+            <Link
+              href={`/profile/${author}`}
+              className="font-medium text-stone-900 hover:text-stone-600 transition-colors"
+            >
               {author.slice(0, 6)}...{author.slice(-4)}
-            </div>
+            </Link>
             <div className="text-sm text-stone-500 flex items-center gap-2">
               <span>{new Date(Number(createdAt) * 1000).toLocaleDateString()}</span>
               <span>·</span>
