@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Camera, CheckCircle2, Globe, Loader2, Twitter, User, X } from "lucide-react";
-import { useAccount } from "wagmi";
+import { useAccount, useEnsName, useSignMessage } from "wagmi";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { generatePaperSubdomain, normalizeUsernameLabel, resolveUsername } from "~~/lib/ens-identity";
 import {
   UserProfile,
   fetchProfileFromIPFS,
@@ -14,6 +15,7 @@ import {
 } from "~~/lib/ipfs";
 
 const defaultProfile: UserProfile = {
+  username: "",
   name: "",
   bio: "",
   avatar: undefined,
@@ -23,6 +25,7 @@ const defaultProfile: UserProfile = {
 };
 
 export default function ProfilePage() {
+  const ENS_CHAIN_ID = Number(process.env.NEXT_PUBLIC_ENS_CHAIN_ID || "11155111");
   const router = useRouter();
   const { address, isConnected, status } = useAccount();
   const [isWalletReady, setIsWalletReady] = useState(false);
@@ -33,6 +36,7 @@ export default function ProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [initialProfileSnapshot, setInitialProfileSnapshot] = useState(JSON.stringify(defaultProfile));
 
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -46,6 +50,43 @@ export default function ProfilePage() {
   });
 
   const { writeContractAsync } = useScaffoldWriteContract({ contractName: "Paper" });
+  const { signMessageAsync } = useSignMessage();
+  const { data: ensName } = useEnsName({
+    address,
+    chainId: ENS_CHAIN_ID,
+    query: { enabled: Boolean(address) },
+  });
+
+  const registerEnsSubname = async (ownerAddress: string, usernameLabel: string) => {
+    const timestamp = Date.now();
+    const message = [
+      "Paper ENS subname registration",
+      `Username: ${usernameLabel}`,
+      `Address: ${ownerAddress.toLowerCase()}`,
+      `Timestamp: ${timestamp}`,
+    ].join("\n");
+
+    const signature = await signMessageAsync({ message });
+
+    const response = await fetch("/api/ens/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address: ownerAddress,
+        username: usernameLabel,
+        message,
+        signature,
+        timestamp,
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result?.error || "Failed to register ENS username");
+    }
+
+    return result.ensName as string;
+  };
 
   useEffect(() => {
     if (address !== undefined) {
@@ -76,6 +117,7 @@ export default function ProfilePage() {
           if (cid && cid.length > 0) {
             const profileData = await fetchProfileFromIPFS(cid);
             setProfile(profileData);
+            setInitialProfileSnapshot(JSON.stringify(profileData));
             if (profileData.avatar) {
               setAvatarPreview(getIPFSGatewayUrl(profileData.avatar));
             }
@@ -156,7 +198,23 @@ export default function ProfilePage() {
     setSaveSuccess(false);
 
     try {
-      const updatedProfile = { ...profile, updatedAt: Date.now() };
+      const normalizedUsername = normalizeUsernameLabel(profile.username || profile.name);
+      const generatedSubdomain = generatePaperSubdomain(address, normalizedUsername);
+      let registeredSubdomain = profile.ensSubdomain;
+
+      if (!ensName && normalizedUsername) {
+        const requestedEnsName = `${normalizedUsername}.${process.env.NEXT_PUBLIC_PAPER_ENS_PARENT || "paper.eth"}`;
+        if (profile.ensSubdomain !== requestedEnsName) {
+          registeredSubdomain = await registerEnsSubname(address, normalizedUsername);
+        }
+      }
+
+      const updatedProfile = {
+        ...profile,
+        username: normalizedUsername,
+        ensSubdomain: ensName ? profile.ensSubdomain : registeredSubdomain || generatedSubdomain,
+        updatedAt: Date.now(),
+      };
       const cid = await uploadProfileToIPFS(updatedProfile);
 
       await writeContractAsync({
@@ -165,6 +223,7 @@ export default function ProfilePage() {
       });
 
       setProfile(updatedProfile);
+      setInitialProfileSnapshot(JSON.stringify(updatedProfile));
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
@@ -174,13 +233,13 @@ export default function ProfilePage() {
     }
   };
 
-  const hasChanges =
-    profile.name ||
-    profile.bio ||
-    profile.avatar ||
-    profile.coverImage ||
-    profile.socialLinks?.twitter ||
-    profile.socialLinks?.website;
+  const hasChanges = JSON.stringify(profile) !== initialProfileSnapshot;
+
+  const usernamePreview = resolveUsername({
+    ensName,
+    profile,
+    address,
+  });
 
   if (!isWalletReady || isContractLoading) {
     return (
@@ -286,6 +345,24 @@ export default function ProfilePage() {
         )}
 
         <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-stone-700 mb-2">Username</label>
+            <input
+              type="text"
+              placeholder="yourname"
+              value={profile.username || ""}
+              onChange={e => setProfile(prev => ({ ...prev, username: e.target.value }))}
+              className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-100 transition-all outline-none"
+              maxLength={24}
+            />
+            <p className="text-xs text-stone-400 mt-1.5">
+              {ensName
+                ? "Using your wallet ENS name by default."
+                : "Saving will register this as a paper.eth ENS subname."}
+            </p>
+            <p className="text-xs text-stone-500 mt-1">Resolved username: {usernamePreview}</p>
+          </div>
+
           {/* Name */}
           <div>
             <label className="block text-sm font-semibold text-stone-700 mb-2">Display Name</label>

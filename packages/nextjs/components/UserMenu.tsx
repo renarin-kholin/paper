@@ -1,12 +1,15 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ChevronDown, CircleDot, User, Wallet } from "lucide-react";
 import { hardhat } from "viem/chains";
 import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
 import { FaucetButton } from "~~/components/scaffold-eth";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { resolveUsername } from "~~/lib/ens-identity";
+import { UserProfile, fetchProfileFromIPFS } from "~~/lib/ipfs";
 
 export const UserMenu = () => {
   const { isConnected, chain, address } = useAccount();
@@ -21,6 +24,44 @@ export const UserMenu = () => {
     name: ensName || undefined,
     chainId: 1,
     query: { enabled: Boolean(ensName) },
+  });
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  const { data: profileCID } = useScaffoldReadContract({
+    contractName: "Paper",
+    functionName: "getUserProfileCID" as any,
+    args: address ? ([address] as any) : undefined,
+    query: { enabled: Boolean(address) },
+  });
+
+  useEffect(() => {
+    let active = true;
+    const cid = typeof profileCID === "string" ? profileCID : "";
+
+    if (!cid) {
+      setProfile(null);
+      return;
+    }
+
+    fetchProfileFromIPFS(cid)
+      .then(data => {
+        if (!active) return;
+        setProfile(data);
+      })
+      .catch(() => {
+        if (!active) return;
+        setProfile(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [profileCID]);
+
+  const username = resolveUsername({
+    ensName,
+    profile,
+    address,
   });
 
   useOutsideClick(menuRef, () => {
@@ -58,7 +99,7 @@ export const UserMenu = () => {
           </div>
           {isConnected && (
             <div className="mb-2 rounded-md bg-white/80 px-2 py-1 text-xs text-stone-500 border border-stone-200">
-              {ensName || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+              {username}
             </div>
           )}
 
