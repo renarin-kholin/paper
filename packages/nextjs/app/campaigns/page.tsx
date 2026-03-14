@@ -156,7 +156,7 @@ export default function CampaignsPage() {
 
   useEffect(() => {
     if (userCampaigns) {
-      setCampaignIds(userCampaigns);
+      setCampaignIds([...userCampaigns]);
     }
   }, [userCampaigns]);
 
