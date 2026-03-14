@@ -22,7 +22,7 @@ const ensureContentLength = (request: NextRequest, maxBytes: number) => {
 };
 
 const resolveProvider = () => {
-  if (!isProduction) return "local" as const;
+  // Allow explicit provider selection in any environment
   if (providerEnv === "pinata") {
     if (!process.env.PINATA_JWT) {
       throw new Error("IPFS_PROVIDER=pinata requires PINATA_JWT.");
@@ -35,8 +35,21 @@ const resolveProvider = () => {
     }
     return "web3storage" as const;
   }
+  if (providerEnv === "local") {
+    return "local" as const;
+  }
+
+  // In development, default to local unless explicitly overridden above
+  if (!isProduction) {
+    if (providerEnv !== "auto") {
+      throw new Error("IPFS_PROVIDER must be one of: auto, local, pinata, web3storage.");
+    }
+    return "local" as const;
+  }
+
+  // In production with auto mode, detect available provider
   if (providerEnv !== "auto") {
-    throw new Error("IPFS_PROVIDER must be one of: auto, pinata, web3storage.");
+    throw new Error("IPFS_PROVIDER must be one of: auto, local, pinata, web3storage.");
   }
   if (process.env.PINATA_JWT) return "pinata" as const;
   if (process.env.WEB3_STORAGE_TOKEN) return "web3storage" as const;
