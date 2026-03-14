@@ -132,7 +132,7 @@ export default function BookmarksPage() {
     <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 page-fade-in">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-stone-900">Bookmarks</h1>
-        <p className="text-stone-500 mt-1">{uniqueIds.length} saved stories</p>
+        <p className="text-stone-500 mt-1">{uniqueIds.length} saved articles</p>
       </div>
 
       {!address ? (
@@ -150,7 +150,7 @@ export default function BookmarksPage() {
       ) : (
         <div className="rounded-2xl border border-stone-200 bg-stone-50 p-10 text-center text-stone-500">
           <BookmarkX className="mx-auto mb-4 w-10 h-10 text-stone-300" />
-          <p>No bookmarked stories yet.</p>
+          <p>No bookmarked articles yet.</p>
         </div>
       )}
     </div>

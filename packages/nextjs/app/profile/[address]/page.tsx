@@ -368,7 +368,7 @@ export default function PublicProfilePage() {
       <div className="border-t border-stone-100 mt-8">
         <div className="px-4 md:px-8 py-6">
           <h2 className="text-xl font-bold text-stone-900 mb-6">
-            {articleIds.length} {articleIds.length === 1 ? "Story" : "Stories"}
+            {articleIds.length} {articleIds.length === 1 ? "Article" : "Articles"}
           </h2>
 
           {articleIds.length > 0 ? (
@@ -379,7 +379,7 @@ export default function PublicProfilePage() {
             </div>
           ) : (
             <div className="rounded-2xl border border-stone-200 bg-stone-50 p-8 text-center text-stone-500">
-              No stories published yet.
+              No articles published yet.
             </div>
           )}
         </div>
