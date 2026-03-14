@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
@@ -10,7 +12,28 @@ export async function POST(request: NextRequest) {
       const body = await request.arrayBuffer();
       const buffer = Buffer.from(body);
 
-      // Upload to local IPFS node (server-side, no CORS)
+      if (isProduction) {
+        // Upload to Pinata (production)
+        const formData = new FormData();
+        formData.append("file", new Blob([buffer], { type: "application/json" }), "metadata.json");
+
+        const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.PINATA_JWT}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Pinata upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        return NextResponse.json({ cid: result.IpfsHash });
+      }
+
+      // Upload to local IPFS node (development)
       const formData = new FormData();
       formData.append("file", new Blob([buffer], { type: "application/json" }), "metadata.json");
 
@@ -41,7 +64,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "CID required" }, { status: 400 });
     }
 
-    // Use POST to /api/v0/cat with form data
+    if (isProduction) {
+      // Use Pinata gateway (production)
+      const gatewayUrl = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "https://gateway.pinata.cloud/ipfs";
+      const response = await fetch(`${gatewayUrl}/${cid}`);
+
+      if (!response.ok) {
+        throw new Error(`Pinata fetch failed: ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      return NextResponse.json(JSON.parse(text));
+    }
+
+    // Use local IPFS node (development)
     const formData = new FormData();
     formData.append("arg", cid);
 

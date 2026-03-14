@@ -1,9 +1,10 @@
 const path = require("path");
 
 const buildNextEslintCommand = (filenames) =>
-  `yarn next:lint --fix --file ${filenames
+  `yarn next:lint-staged -- ${filenames
     .map((f) => path.relative(path.join("packages", "nextjs"), f))
-    .join(" --file ")}`;
+    .map((f) => `"${f}"`)
+    .join(" ")}`;
 
 const checkTypesNextCommand = () => "yarn next:check-types";
 

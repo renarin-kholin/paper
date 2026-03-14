@@ -33,7 +33,7 @@ export default function PostPage() {
   const { data: hasPaid } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "hasPaidForArticle",
-    args: address ? [tokenId, address] : undefined,
+    args: [tokenId, address] as const,
     query: { enabled: Boolean(address) },
   });
 
