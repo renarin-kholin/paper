@@ -7,6 +7,7 @@ import { Address } from "@scaffold-ui/components";
 import { BookmarkPlus, MoreHorizontal, Star } from "lucide-react";
 import { useAccount } from "wagmi";
 import { LikeButton } from "~~/components/LikeButton";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { calculateReadTime, fetchFromIPFS } from "~~/lib/ipfs";
 
@@ -32,13 +33,13 @@ function PostCard({ id }: { id: bigint }) {
   const [preview, setPreview] = useState("");
   const [readTime, setReadTime] = useState<number | null>(null);
 
-  const { data: meta } = useScaffoldReadContract({
+  const { data: meta, isLoading: isMetaLoading } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "articleMeta",
     args: [id],
   });
 
-  const { data: cid } = useScaffoldReadContract({
+  const { data: cid, isLoading: isCidLoading } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "getArticleCID",
     args: [id],
@@ -67,7 +68,7 @@ function PostCard({ id }: { id: bigint }) {
     };
   }, [cid]);
 
-  if (!meta || !cid) {
+  if (isMetaLoading || isCidLoading) {
     return (
       <article className="group flex gap-4 sm:gap-6 items-start page-fade-in">
         <div className="flex-1 min-w-0">
@@ -76,6 +77,10 @@ function PostCard({ id }: { id: bigint }) {
         </div>
       </article>
     );
+  }
+
+  if (!meta || !cid) {
+    return null;
   }
 
   const [author, createdAt, title, price] = meta as ArticleMetaTuple;
@@ -135,13 +140,23 @@ export default function Home() {
   const { address } = useAccount();
   const [feedTab, setFeedTab] = useState<"for-you" | "following">("for-you");
 
-  const { data: articleCount } = useScaffoldReadContract({
+  const { data: deployedPaperContract, isLoading: isPaperContractLoading } = useDeployedContractInfo({
+    contractName: "Paper",
+  });
+
+  const { data: articleCount, isLoading: isArticleCountLoading } = useScaffoldReadContract({
     contractName: "Paper",
     functionName: "articleCount",
   });
 
   const count = articleCount ? Number(articleCount) : 0;
-  const postIds = Array.from({ length: count }, (_, i) => BigInt(count - 1 - i));
+  const postIds = useMemo(() => {
+    if (count <= 0) return [];
+
+    // Include both possible ID bases: [count..0].
+    // If the contract is 0-based, id=count is ignored; if 1-based, id=0 is ignored.
+    return Array.from({ length: count + 1 }, (_, i) => BigInt(count - i));
+  }, [count]);
 
   const visibleIds = useMemo(() => {
     if (feedTab === "for-you" || !address) return postIds;
@@ -169,11 +184,17 @@ export default function Home() {
         </div>
 
         <div className="space-y-10">
+          {!isPaperContractLoading && !deployedPaperContract && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-center text-amber-900">
+              Paper contract is not deployed on the currently selected network. Switch network or deploy first.
+            </div>
+          )}
+
           {visibleIds.map(id => (
             <PostCard key={id.toString()} id={id} />
           ))}
 
-          {visibleIds.length === 0 && (
+          {!isArticleCountLoading && deployedPaperContract && visibleIds.length === 0 && (
             <div className="rounded-2xl border border-stone-200 bg-stone-50 p-8 text-center text-stone-500">
               No posts yet. Be the first to publish!
             </div>

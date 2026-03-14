@@ -1,3 +1,4 @@
+import deployedContracts from "~~/contracts/deployedContracts";
 import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 
 /**
@@ -11,6 +12,18 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
  *   },
  * } as const;
  */
-const externalContracts = {} as const;
+const baseSepoliaPaperAddress = process.env.NEXT_PUBLIC_PAPER_CONTRACT_ADDRESS;
+const paperAbi = deployedContracts[31337]?.Paper?.abi;
+
+const externalContracts: GenericContractsDeclaration = {};
+
+if (baseSepoliaPaperAddress && paperAbi) {
+  externalContracts[84532] = {
+    Paper: {
+      address: baseSepoliaPaperAddress,
+      abi: paperAbi,
+    },
+  };
+}
 
 export default externalContracts satisfies GenericContractsDeclaration;

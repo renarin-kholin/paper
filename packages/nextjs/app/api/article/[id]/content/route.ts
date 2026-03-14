@@ -1,21 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { readContract } from "viem/actions";
-import { baseSepolia } from "viem/chains";
-import { ETH_ADDRESS, fetchFromIPFS } from "~~/lib/ipfs";
+import { baseSepolia, foundry } from "viem/chains";
+import deployedContracts from "~~/contracts/deployedContracts";
+import { ETH_ADDRESS } from "~~/lib/ipfs";
 
-const PAPERS_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PAPER_CONTRACT_ADDRESS as string;
+const FALLBACK_LOCAL_PAPER_ADDRESS = deployedContracts[31337]?.Paper?.address;
+const PAPERS_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PAPER_CONTRACT_ADDRESS || FALLBACK_LOCAL_PAPER_ADDRESS;
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:8545";
+const CHAIN =
+  RPC_URL.includes("localhost") || RPC_URL.includes("127.0.0.1") || RPC_URL.includes("0.0.0.0") ? foundry : baseSepolia;
 
 const client = createPublicClient({
   transport: http(RPC_URL),
-  chain: baseSepolia,
+  chain: CHAIN,
 });
 
+async function fetchArticleMetadataFromApi(cid: string, request: NextRequest) {
+  const url = `${request.nextUrl.origin}/api/ipfs`;
+  const body = new TextEncoder().encode(cid);
+
+  const response = await fetch(url, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "text/plain",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`IPFS API responded ${response.status}`);
+  }
+
+  return response.json() as Promise<{ content: string; preview?: string }>;
+}
+
 async function getArticlePrice(articleId: string) {
+  if (!PAPERS_CONTRACT_ADDRESS) {
+    console.error("Paper contract address is not configured.");
+    return null;
+  }
+
   const tokenId = BigInt(articleId);
 
   try {
+    const articleCount = (await readContract(client, {
+      address: PAPERS_CONTRACT_ADDRESS,
+      abi: [
+        {
+          inputs: [],
+          name: "articleCount",
+          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          stateMutability: "view",
+          type: "function",
+        },
+      ],
+      functionName: "articleCount",
+    })) as bigint;
+
+    if (tokenId >= articleCount) {
+      return null;
+    }
+
     const meta = (await readContract(client, {
       address: PAPERS_CONTRACT_ADDRESS,
       abi: [
@@ -58,8 +105,14 @@ async function getArticlePrice(articleId: string) {
       priceToken: meta[4],
       cid,
     };
-  } catch {
-    console.error("Error fetching article price:", PAPERS_CONTRACT_ADDRESS, RPC_URL);
+  } catch (error) {
+    console.error("Error fetching article info:", {
+      contract: PAPERS_CONTRACT_ADDRESS,
+      rpc: RPC_URL,
+      chainId: CHAIN.id,
+      articleId,
+      error,
+    });
     return null;
   }
 }
@@ -79,7 +132,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Check if article is free
   if (price === 0n) {
     try {
-      const metadata = await fetchFromIPFS(cid);
+      const metadata = await fetchArticleMetadataFromApi(cid, request);
       return NextResponse.json({
         content: metadata.content,
         preview: metadata.preview || metadata.content.slice(0, 200),
@@ -99,7 +152,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (paymentAuth) {
     // Payment was made - verify and return content
     try {
-      const metadata = await fetchFromIPFS(cid);
+      const metadata = await fetchArticleMetadataFromApi(cid, request);
       return NextResponse.json({
         content: metadata.content,
         preview: metadata.preview || metadata.content.slice(0, 200),
