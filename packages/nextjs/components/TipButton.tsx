@@ -27,21 +27,26 @@ export function TipButton({ authorAddress, className = "" }: TipButtonProps) {
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
 
   const isOwnProfile = connectedAddress?.toLowerCase() === authorAddress?.toLowerCase();
+  const [priceLoaded, setPriceLoaded] = useState(false);
 
   useEffect(() => {
+    if (priceLoaded) return;
+
     async function loadPrice() {
       try {
         const price = await fetchPriceFromUniswap(targetNetwork);
         setEthPrice(price);
+        setPriceLoaded(true);
       } catch (err) {
         console.error("Failed to fetch ETH price:", err);
         setEthPrice(3000);
+        setPriceLoaded(true);
       } finally {
         setIsLoadingPrice(false);
       }
     }
     loadPrice();
-  }, [targetNetwork]);
+  }, [targetNetwork, priceLoaded]);
 
   const usdToEth = (usd: number): string => {
     if (ethPrice <= 0) return "0";

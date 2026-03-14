@@ -37,7 +37,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: events, refetch } = useScaffoldEventHistory({
+  const { data: events } = useScaffoldEventHistory({
     contractName: "Social",
     eventName: "CommentAdded",
     fromBlock: 0n,
@@ -46,32 +46,25 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   });
 
   useEffect(() => {
-    async function loadComments() {
-      console.log("Loading comments, events:", events);
+    let mounted = true;
 
+    async function loadComments() {
+      if (!mounted) return;
       if (!events || !Array.isArray(events)) {
-        console.log("No events array, setting empty");
         setIsLoading(false);
         return;
       }
 
       const typedEvents = events as unknown as CommentEvent[];
-      console.log("Typed events:", typedEvents);
-
       const loadedComments: CommentWithBody[] = [];
 
       for (const event of typedEvents) {
-        console.log("Processing event:", event);
-
         const author = event.author;
         const cid = event.cid;
         const timestamp = Number(event.timestamp || 0n);
         const txHash = event.transactionHash;
 
-        if (!author) {
-          console.log("Skipping: no author");
-          continue;
-        }
+        if (!author) continue;
 
         let body = "[Comment content unavailable]";
 
@@ -79,9 +72,8 @@ export function CommentSection({ articleId }: CommentSectionProps) {
           try {
             const commentData = await fetchCommentFromIPFS(cid);
             body = commentData.body || body;
-            console.log("Fetched comment:", commentData);
-          } catch (err) {
-            console.log("IPFS fetch failed:", err);
+          } catch {
+            // Use fallback body
           }
         }
 
@@ -93,12 +85,17 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         });
       }
 
-      console.log("Loaded comments:", loadedComments);
-      setComments(loadedComments.reverse());
-      setIsLoading(false);
+      if (mounted) {
+        setComments(loadedComments.reverse());
+        setIsLoading(false);
+      }
     }
 
     loadComments();
+
+    return () => {
+      mounted = false;
+    };
   }, [events]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -126,7 +123,6 @@ export function CommentSection({ articleId }: CommentSectionProps) {
       console.log("Contract call successful");
 
       setNewComment("");
-      refetch();
     } catch (err: any) {
       console.error("Failed to add comment:", err);
       setError(err.message || "Failed to add comment");
