@@ -15,6 +15,7 @@ import { LikeButton } from "~~/components/LikeButton";
 import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowerCount, useFollowingCount } from "~~/hooks/scaffold-eth/useFollowingList";
+import { resolveUsername } from "~~/lib/ens-identity";
 import {
   UserProfile,
   calculateReadTime,
@@ -280,10 +281,11 @@ export default function PublicProfilePage() {
     );
   }
 
-  const displayName =
-    profile?.name ||
-    resolvedEnsName ||
-    (isEnsParam ? routeParam : `${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)}`);
+  const username = resolveUsername({
+    ensName: resolvedEnsName || (isEnsParam ? routeParam : undefined),
+    profile,
+    address: resolvedAddress,
+  });
   const displayBio = profile?.bio || "This author hasn't added a bio yet.";
 
   return (
@@ -316,7 +318,8 @@ export default function PublicProfilePage() {
       <div className="px-4 md:px-8 pb-8">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-stone-900 mb-2">{displayName}</h1>
+            <h1 className="text-3xl font-bold text-stone-900 mb-2">{username}</h1>
+            {profile?.name && profile.name !== username && <p className="text-stone-700 mb-1">{profile.name}</p>}
             <div className="text-stone-500 text-sm mb-2">
               <Address address={resolvedAddress} onlyEnsOrAddress disableAddressLink size="base" />
             </div>

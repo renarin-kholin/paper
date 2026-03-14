@@ -26,7 +26,9 @@ export interface ArticleMetadata {
 }
 
 export interface UserProfile {
+  username?: string;
   name: string;
+  ensSubdomain?: string;
   bio: string;
   avatar?: string; // IPFS CID for image
   coverImage?: string; // IPFS CID for image
