@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, MessageCircle, RefreshCw, Send } from "lucide-react";
 import { useAccount, usePublicClient } from "wagmi";
+import { CommentSkeleton } from "~~/components/LoadingStates";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { fetchCommentFromIPFS, uploadCommentToIPFS } from "~~/lib/ipfs";
 
@@ -198,6 +199,8 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         <button
           onClick={handleRefresh}
           className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+          type="button"
+          aria-label="Refresh comments"
           title="Refresh comments"
         >
           <RefreshCw className="w-4 h-4" />
@@ -234,9 +237,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
       )}
 
       {isLoadingComments ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-stone-400" />
-        </div>
+        <CommentSkeleton count={3} />
       ) : comments.length > 0 ? (
         <div className="space-y-6">
           {comments.map(comment => (

@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+
+import { ChevronDown, CircleDot, Loader2, User, Wallet } from "lucide-react";
 import { useBalance } from "@scaffold-ui/hooks";
-import { ChevronDown, CircleDot, User, Wallet } from "lucide-react";
+
 import { hardhat } from "viem/chains";
 import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
 import { FaucetButton } from "~~/components/scaffold-eth";
@@ -119,7 +121,10 @@ export const UserMenu = () => {
               if (!mounted) {
                 return (
                   <button type="button" className="btn btn-secondary btn-sm w-full opacity-70" disabled>
-                    Loading wallet...
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
+                      Loading wallet...
+                    </span>
                   </button>
                 );
               }
