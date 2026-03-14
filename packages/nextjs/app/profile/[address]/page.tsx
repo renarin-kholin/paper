@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { BookmarkPlus, Globe, Loader2, Star, Twitter, User } from "lucide-react";
+import { BookmarkPlus, Globe, Loader2, Star, Twitter, User, Users } from "lucide-react";
 import { useAccount } from "wagmi";
 import { FollowButton } from "~~/components/FollowButton";
 import { LikeButton } from "~~/components/LikeButton";
 import { TipButton } from "~~/components/TipButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useFollowerCount, useFollowingCount } from "~~/hooks/scaffold-eth/useFollowingList";
 import { UserProfile, fetchFromIPFS, fetchProfileFromIPFS, getIPFSGatewayUrl } from "~~/lib/ipfs";
 
 type ArticleMetaTuple = [string, bigint, string, bigint, string];
@@ -108,6 +109,26 @@ function AuthorPostCard({ id }: { id: bigint }) {
         />
       </div>
     </article>
+  );
+}
+
+function FollowStats({ address }: { address: string }) {
+  const followerCount = useFollowerCount(address);
+  const followingCount = useFollowingCount(address);
+
+  return (
+    <div className="flex items-center gap-4 text-sm text-stone-500">
+      <div className="flex items-center gap-1">
+        <Users className="w-4 h-4" />
+        <span className="font-medium">{followerCount}</span>
+        <span>Followers</span>
+      </div>
+      <span>·</span>
+      <div className="flex items-center gap-1">
+        <span className="font-medium">{followingCount}</span>
+        <span>Following</span>
+      </div>
+    </div>
   );
 }
 
@@ -224,7 +245,8 @@ export default function PublicProfilePage() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-stone-900 mb-2">{displayName}</h1>
-            <p className="text-stone-600 text-lg">{displayBio}</p>
+            <p className="text-stone-600 text-lg mb-3">{displayBio}</p>
+            <FollowStats address={address} />
           </div>
           {!isOwnProfile && (
             <div className="flex items-center gap-2">
