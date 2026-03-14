@@ -3,7 +3,7 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, BookMarked, BookOpen, Home, User } from "lucide-react";
+import { BarChart2, BookMarked, BookOpen, Home, Megaphone, User } from "lucide-react";
 import { useAccount, useEnsAvatar, useEnsName } from "wagmi";
 
 type NavItem = {
@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Stats", icon: BarChart2 },
   { href: "/bookmarks", label: "Bookmarks", icon: BookMarked },
   { href: "/write", label: "Stories", icon: BookOpen },
+  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/profile", label: "Profile", icon: User },
 ];
 

@@ -1,9 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./DeployHelpers.s.sol";
-import { DeployPaper } from "./DeployPaper.s.sol";
-import { DeploySocial } from "./DeploySocial.s.sol";
+import {ScaffoldETHDeploy} from "./DeployHelpers.s.sol";
+import {console} from "forge-std/Script.sol";
+import {AdCampaigns} from "../contracts/AdCampaigns.sol";
+import {Paper} from "../contracts/Paper.sol";
+import {Social} from "../contracts/Social.sol";
 
 /**
  * @notice Main deployment script for all contracts
@@ -12,13 +14,23 @@ import { DeploySocial } from "./DeploySocial.s.sol";
  * Example: yarn deploy # runs this script(without`--file` flag)
  */
 contract DeployScript is ScaffoldETHDeploy {
-    function run() external {
+    function run() external ScaffoldEthDeployerRunner {
         // Deploy Paper contract (core publishing)
-        DeployPaper deployPaper = new DeployPaper();
-        deployPaper.run();
+        address paperAddress = address(new Paper());
+        console.log("Paper deployed at:", paperAddress);
+        deployments.push(Deployment({name: "Paper", addr: paperAddress}));
 
         // Deploy Social contract (follows, likes, tips)
-        DeploySocial deploySocial = new DeploySocial();
-        deploySocial.run();
+        address socialAddress = address(new Social());
+        console.log("Social deployed at:", socialAddress);
+        deployments.push(Deployment({name: "Social", addr: socialAddress}));
+
+        // Deploy AdCampaigns contract (advertising)
+        address adCampaignsAddress = address(new AdCampaigns(paperAddress));
+        console.log("AdCampaigns deployed at:", adCampaignsAddress);
+        console.log("  -> Paper contract reference:", paperAddress);
+        deployments.push(
+            Deployment({name: "AdCampaigns", addr: adCampaignsAddress})
+        );
     }
 }

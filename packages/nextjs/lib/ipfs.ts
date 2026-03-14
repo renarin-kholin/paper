@@ -45,6 +45,18 @@ export interface Comment {
   createdAt: number;
 }
 
+export interface Campaign {
+  advertiser: string;
+  articleId: bigint;
+  imageCid: string;
+  linkUrl: string;
+  startTime: bigint;
+  endTime: bigint;
+  dailyRateWei: bigint;
+  totalPaid: bigint;
+  active: boolean;
+}
+
 const WORDS_PER_MINUTE = 200;
 
 export function calculateReadTime(content: string): number {

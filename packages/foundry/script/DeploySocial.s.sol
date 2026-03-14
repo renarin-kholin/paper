@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./DeployHelpers.s.sol";
-import "../contracts/Social.sol";
+import {ScaffoldETHDeploy} from "./DeployHelpers.s.sol";
+import {Social} from "../contracts/Social.sol";
 
 /**
  * @notice Deploy script for Social contract
