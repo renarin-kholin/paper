@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { readContract } from "viem/actions";
-import { baseSepolia } from "viem/chains";
+import { hardhat } from "viem/chains";
+import deployedContracts from "~~/contracts/deployedContracts";
 import { ETH_ADDRESS } from "~~/lib/ipfs";
 
-const PAPERS_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PAPER_CONTRACT_ADDRESS as string;
+const PAPERS_CONTRACT_ADDRESS = deployedContracts[hardhat.id as keyof typeof deployedContracts]?.Paper?.address;
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:8545";
 
 const client = createPublicClient({
   transport: http(RPC_URL),
-  chain: baseSepolia,
+  chain: hardhat,
 });
 
 async function getArticlePrice(articleId: string) {
@@ -75,6 +76,7 @@ async function fetchArticleMetadata(cid: string) {
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
   const { id } = await params;
   const tokenId = id;
 
